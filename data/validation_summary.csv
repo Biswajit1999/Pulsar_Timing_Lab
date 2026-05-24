@@ -1,0 +1,5 @@
+check,value,expected,passed
+zero_dm_delay_ms,0.0,0.0,True
+dm_linearity_ratio,2.0,2.0,True
+zero_glitch_rows,31,31,True
+glitch_residual_scaling,2.053639846743295,2.0,False

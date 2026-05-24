@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Interactive pulsar timing, phase folding, dispersion, and glitch simulation lab.">
+    <title>Pulsar Timing Lab</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Astrophysics Signal Processing</p>
+        <h1>Pulsar Timing Lab</h1>
+      </div>
+      <div class="status-grid" aria-label="Simulation summary">
+        <div>
+          <span>Period</span>
+          <strong id="summary-period">33.0 ms</strong>
+        </div>
+        <div>
+          <span>DM Delay</span>
+          <strong id="summary-dm">0.00 ms</strong>
+        </div>
+        <div>
+          <span>RMS Residual</span>
+          <strong id="summary-rms">0.00 ms</strong>
+        </div>
+        <div>
+          <span>Glitch Step</span>
+          <strong id="summary-glitch">0.000 ppm</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <aside class="panel controls-panel" aria-label="Simulation controls">
+        <div class="panel-heading">
+          <h2>Model Controls</h2>
+          <button id="reset-button" type="button">Reset</button>
+        </div>
+
+        <section class="control-group">
+          <h3>Pulsar</h3>
+          <label>
+            <span>Spin period <output id="period-value">33.0 ms</output></span>
+            <input id="period" type="range" min="1.5" max="1000" step="0.5" value="33">
+          </label>
+          <label>
+            <span>Pulse width <output id="width-value">4.5%</output></span>
+            <input id="width" type="range" min="1.5" max="18" step="0.1" value="4.5">
+          </label>
+          <label>
+            <span>Spin-down rate <output id="spindown-value">4.2e-13 s/s</output></span>
+            <input id="spindown" type="range" min="0" max="120" step="1" value="42">
+          </label>
+        </section>
+
+        <section class="control-group">
+          <h3>Observation</h3>
+          <label>
+            <span>Duration <output id="duration-value">3.0 h</output></span>
+            <input id="duration" type="range" min="0.5" max="12" step="0.5" value="3">
+          </label>
+          <label>
+            <span>TOA cadence <output id="cadence-value">6.0 min</output></span>
+            <input id="cadence" type="range" min="1" max="30" step="1" value="6">
+          </label>
+          <label>
+            <span>Timing noise <output id="noise-value">0.060 ms</output></span>
+            <input id="noise" type="range" min="0" max="1.2" step="0.01" value="0.06">
+          </label>
+        </section>
+
+        <section class="control-group">
+          <h3>Interstellar Medium</h3>
+          <label>
+            <span>Dispersion measure <output id="dm-value">56 pc cm^-3</output></span>
+            <input id="dm" type="range" min="0" max="500" step="1" value="56">
+          </label>
+          <label>
+            <span>Centre frequency <output id="freq-value">1400 MHz</output></span>
+            <input id="freq" type="range" min="350" max="2400" step="10" value="1400">
+          </label>
+          <label>
+            <span>Bandwidth <output id="bandwidth-value">300 MHz</output></span>
+            <input id="bandwidth" type="range" min="30" max="900" step="10" value="300">
+          </label>
+        </section>
+
+        <section class="control-group">
+          <h3>Glitch</h3>
+          <label>
+            <span>Glitch epoch <output id="glitch-epoch-value">55%</output></span>
+            <input id="glitchEpoch" type="range" min="5" max="95" step="1" value="55">
+          </label>
+          <label>
+            <span>Frequency jump <output id="glitch-size-value">3.0 ppm</output></span>
+            <input id="glitchSize" type="range" min="0" max="30" step="0.1" value="3">
+          </label>
+        </section>
+
+        <button id="export-button" class="export-button" type="button">Export synthetic TOAs</button>
+      </aside>
+
+      <section class="plot-grid">
+        <article class="panel plot-panel large">
+          <div class="panel-heading">
+            <h2>Folded Pulse Profile</h2>
+            <span id="profile-note">64 phase bins</span>
+          </div>
+          <canvas id="profile-canvas" width="900" height="380" aria-label="Folded pulse profile plot"></canvas>
+        </article>
+
+        <article class="panel plot-panel">
+          <div class="panel-heading">
+            <h2>Timing Residuals</h2>
+            <span>observed minus model</span>
+          </div>
+          <canvas id="residual-canvas" width="620" height="360" aria-label="Timing residual plot"></canvas>
+        </article>
+
+        <article class="panel plot-panel">
+          <div class="panel-heading">
+            <h2>Dispersed Radio Pulse</h2>
+            <span>frequency-time sweep</span>
+          </div>
+          <canvas id="waterfall-canvas" width="620" height="360" aria-label="Dispersion waterfall plot"></canvas>
+        </article>
+
+        <article class="panel model-panel">
+          <div class="panel-heading">
+            <h2>Timing Model</h2>
+            <span>simplified assumptions</span>
+          </div>
+          <div class="equation-grid">
+            <p><strong>Rotational phase</strong><span>phi(t) = phi0 + nu t + 0.5 nudot t^2</span></p>
+            <p><strong>Dispersion delay</strong><span>Delta t = 4.148808 ms DM (nu1^-2 - nu2^-2)</span></p>
+            <p><strong>Residual</strong><span>R = TOA_observed - TOA_model</span></p>
+            <p><strong>Glitch</strong><span>nu -> nu + Delta nu after selected epoch</span></p>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>
