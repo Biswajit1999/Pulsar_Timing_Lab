@@ -80,7 +80,12 @@ Pulsar Timing Lab/
   docs/
     equations.md
     validation.md
+    image_prompt.md
 ```
+
+## README Image Prompt
+
+A README hero image prompt is provided in [`docs/image_prompt.md`](docs/image_prompt.md). It is written for generating a polished scientific visual that can be added later as a repository banner.
 
 ## Running Locally
 
