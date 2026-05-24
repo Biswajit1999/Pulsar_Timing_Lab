@@ -236,6 +236,14 @@ canvas {
   line-height: 1.45;
 }
 
+.site-footer {
+  padding: 1.2rem clamp(1rem, 3vw, 2rem) 1.6rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 @media (max-width: 1180px) {
   .app-header,
   .dashboard {
