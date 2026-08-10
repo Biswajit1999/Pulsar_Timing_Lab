@@ -1,0 +1,9 @@
+{
+  "sourceArchive": "https://data.nanograv.org/static/data/res_dmx_nanograv_11y.tgz",
+  "archiveBytes": 7788603,
+  "residualMemberPattern": "res_ave/<pulsar>.ares",
+  "dmxMemberPattern": "dmx_vals/<pulsar>.dmx",
+  "processing": "ASCII values preserved in JSON; no fitting or model subtraction performed by this builder.",
+  "releaseWarning": "NANOGrav cautions that timing residual values depend on the fitted timing model; new astrophysical studies should re-fit standard and additional parameters together.",
+  "citation": "Arzoumanian, Z. et al., 2018. The NANOGrav 11-year Data Set: High-precision timing of 45 Millisecond Pulsars. The Astrophysical Journal Supplement Series, 235, 37."
+}

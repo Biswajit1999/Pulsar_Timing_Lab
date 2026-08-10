@@ -1,5 +1,8 @@
 check,value,expected,passed
-zero_dm_delay_ms,0.0,0.0,True
+quadratic_phase_cycles,138241.88011027977,138241.88011027977,True
+zero_dm_delay_seconds,0.0,0.0,True
+dispersion_seconds_unit_convention,0.08558717197916668,0.08558717197916668,True
 dm_linearity_ratio,2.0,2.0,True
-zero_glitch_rows,31,31,True
-glitch_residual_scaling,2.053639846743295,2.0,False
+millisecond_display_conversion,85.58717197916668,85.58717197916668,True
+quiet_model_zero_residual_us,0.0,0.0,True
+glitch_residual_step_scaling,2.0,2.0,True

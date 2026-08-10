@@ -3,147 +3,268 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Interactive pulsar timing, phase folding, dispersion, and glitch simulation lab.">
-    <title>Pulsar Timing Lab</title>
+    <meta name="theme-color" content="#0b0f19">
+    <meta
+      name="description"
+      content="NANOGrav observation-first pulsar timing console with released residuals, DMX products and optional physical perturbation modelling."
+    >
+    <title>Pulsar Timing Lab | NANOGrav Residual Console</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="assets/css/style.css">
+    <script src="assets/js/app.js" defer></script>
   </head>
   <body>
-    <header class="app-header">
-      <div>
-        <p class="eyebrow">Astrophysics Signal Processing</p>
-        <h1>Pulsar Timing Lab</h1>
-      </div>
-      <div class="status-grid" aria-label="Simulation summary">
-        <div>
-          <span>Period</span>
-          <strong id="summary-period">33.0 ms</strong>
-        </div>
-        <div>
-          <span>DM Delay</span>
-          <strong id="summary-dm">0.00 ms</strong>
-        </div>
-        <div>
-          <span>RMS Residual</span>
-          <strong id="summary-rms">0.00 ms</strong>
-        </div>
-        <div>
-          <span>Glitch Step</span>
-          <strong id="summary-glitch">0.000 ppm</strong>
-        </div>
-      </div>
-    </header>
-
-    <main class="dashboard">
-      <aside class="panel controls-panel" aria-label="Simulation controls">
-        <div class="panel-heading">
-          <h2>Model Controls</h2>
-          <button id="reset-button" type="button">Reset</button>
+    <div class="instrument">
+      <header class="command-bar">
+        <div class="brand">
+          <p class="overline">NANOGRAV 11-YEAR DATA SET / RELEASED RESIDUAL AND DMX PRODUCTS</p>
+          <h1>PULSAR TIMING LAB</h1>
+          <p class="subhead">Observed timing products first / optional rotational-noise injection model</p>
         </div>
 
-        <section class="control-group">
-          <h3>Pulsar</h3>
-          <label>
-            <span>Spin period <output id="period-value">33.0 ms</output></span>
-            <input id="period" type="range" min="1.5" max="1000" step="0.5" value="33">
-          </label>
-          <label>
-            <span>Pulse width <output id="width-value">4.5%</output></span>
-            <input id="width" type="range" min="1.5" max="18" step="0.1" value="4.5">
-          </label>
-          <label>
-            <span>Spin-down rate <output id="spindown-value">4.2e-13 s/s</output></span>
-            <input id="spindown" type="range" min="0" max="120" step="1" value="42">
-          </label>
+        <dl class="header-telemetry" aria-label="Live instrument health">
+          <div>
+            <dt>UTC</dt>
+            <dd id="utc-clock">--:--:--</dd>
+          </div>
+          <div>
+            <dt>ENGINE</dt>
+            <dd><span id="engine-indicator" class="indicator boot"></span><span id="engine-state">BOOT</span></dd>
+          </div>
+          <div>
+            <dt>FRAME RATE</dt>
+            <dd id="frame-rate">-- fps</dd>
+          </div>
+          <div>
+            <dt>DATA MJD</dt>
+            <dd id="cursor-mjd">--</dd>
+          </div>
+        </dl>
+
+        <nav class="transport" aria-label="Data playback transport">
+          <button id="play-button" class="primary" type="button" aria-pressed="true">PAUSE STREAM</button>
+          <button id="reseed-button" type="button">RESEED MODEL</button>
+          <button id="export-button" type="button">EXPORT DATA</button>
+          <button id="reset-button" type="button">RESET</button>
+        </nav>
+      </header>
+
+      <main class="console-grid">
+        <aside class="panel controls" aria-label="Timing data and model controls">
+          <div class="panel-title">
+            <h2>CONTROL MATRIX</h2>
+            <span>DATA / COMPARISON MODEL</span>
+          </div>
+
+          <fieldset class="dataset">
+            <legend>OBSERVED PRODUCT</legend>
+            <label>
+              <span>PULSAR</span>
+              <select id="pulsar">
+                <option value="J1713+0747" selected>J1713+0747</option>
+                <option value="J1909-3744">J1909-3744</option>
+                <option value="B1937+21">B1937+21</option>
+              </select>
+            </label>
+            <label>
+              <span>PLAYBACK <output id="playbackRate-value">24 records/s</output></span>
+              <input id="playbackRate" type="range" min="1" max="120" step="1" value="24">
+            </label>
+            <label class="switch-row model-toggle">
+              <span>SIMULATION OVERLAY <output id="modelOverlay-value">OFF</output></span>
+              <input id="modelOverlay" type="checkbox">
+            </label>
+            <p class="dataset-note">Release: NANOGrav 11-year residuals and DM variations, version 1.0.</p>
+          </fieldset>
+
+          <div id="model-parameters" class="model-parameters inactive" aria-label="Optional model settings">
+            <fieldset>
+              <legend>ROTATIONAL EPHEMERIS MODEL</legend>
+              <label>
+                <span>PERIOD <output id="periodMs-value">4.570 ms</output></span>
+                <input id="periodMs" type="range" min="1" max="100" step="0.001" value="4.57">
+              </label>
+              <label>
+                <span>NU DOT <output id="nudotScale-value">-0.40 x10^-15 Hz/s</output></span>
+                <input id="nudotScale" type="range" min="-200" max="0" step="0.01" value="-0.4">
+              </label>
+              <label>
+                <span>PULSE FWHM <output id="pulseWidthMs-value">0.25 ms</output></span>
+                <input id="pulseWidthMs" type="range" min="0.01" max="8" step="0.01" value="0.25">
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>DISPERSION CALCULATOR</legend>
+              <label>
+                <span>DM <output id="dm-value">15.99 pc cm^-3</output></span>
+                <input id="dm" type="range" min="0" max="100" step="0.01" value="15.99">
+              </label>
+              <label>
+                <span>CENTRE FREQUENCY <output id="centreFrequencyMHz-value">1400 MHz</output></span>
+                <input id="centreFrequencyMHz" type="range" min="300" max="3000" step="1" value="1400">
+              </label>
+              <label>
+                <span>BANDWIDTH <output id="bandwidthMHz-value">800 MHz</output></span>
+                <input id="bandwidthMHz" type="range" min="10" max="1800" step="1" value="800">
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>STOCHASTIC INJECTION</legend>
+              <label>
+                <span>RED RMS <output id="redNoiseUs-value">0.30 us</output></span>
+                <input id="redNoiseUs" type="range" min="0" max="30" step="0.01" value="0.3">
+              </label>
+              <label>
+                <span>RED INDEX <output id="redSpectralIndex-value">4.0</output></span>
+                <input id="redSpectralIndex" type="range" min="0" max="7" step="0.1" value="4">
+              </label>
+              <label>
+                <span>WHITE RMS <output id="whiteNoiseUs-value">0.05 us</output></span>
+                <input id="whiteNoiseUs" type="range" min="0" max="10" step="0.01" value="0.05">
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>ROTATIONAL GLITCH INJECTION</legend>
+              <label class="switch-row">
+                <span>INJECT EVENT</span>
+                <input id="glitchEnabled" type="checkbox">
+              </label>
+              <label>
+                <span>EPOCH <output id="glitchEpochFraction-value">58%</output></span>
+                <input id="glitchEpochFraction" type="range" min="1" max="99" step="1" value="58">
+              </label>
+              <label>
+                <span>DELTA NU / NU <output id="glitchPpm-value">0.001 ppm</output></span>
+                <input id="glitchPpm" type="range" min="0" max="0.02" step="0.0001" value="0.001">
+              </label>
+            </fieldset>
+          </div>
+        </aside>
+
+        <section class="science-deck" aria-label="Scientific displays">
+          <section class="metric-strip" aria-label="Observed timing products">
+            <article>
+              <h2>SELECTED PULSAR</h2>
+              <strong id="frequency-readout">--</strong>
+              <span id="nudot-readout">NANOGrav PRODUCT</span>
+            </article>
+            <article>
+              <h2>DMX RANGE</h2>
+              <strong id="dispersion-readout">--</strong>
+              <span id="frequency-band-readout">-- DMX BINS</span>
+            </article>
+            <article>
+              <h2>OBSERVED RMS</h2>
+              <strong id="rms-readout">-- us</strong>
+              <span id="toa-count-readout">-- SAMPLES</span>
+            </article>
+            <article>
+              <h2>MODEL OVERLAY</h2>
+              <strong id="glitch-readout">OFF</strong>
+              <span id="delta-frequency-readout">RELEASED DATA ONLY</span>
+            </article>
+            <article>
+              <h2>COMPUTE LATENCY</h2>
+              <strong id="compute-readout">-- ms</strong>
+              <span>WORKER GENERATION</span>
+            </article>
+          </section>
+
+          <article class="panel chart residual-display">
+            <div class="panel-title">
+              <div>
+                <h2>NANOGRAV TIMING RESIDUALS</h2>
+                <span>RELEASED DAILY-AVERAGE RESIDUAL SAMPLES / DISPLAYED AGAINST CONVERTED MJD</span>
+              </div>
+              <p class="legend">
+                <span class="key measured"></span>RELEASED
+                <span class="key deterministic"></span>MODEL INJECTION
+                <span class="key epoch"></span>GLITCH
+              </p>
+            </div>
+            <canvas id="residual-canvas" aria-label="NANOGrav timing residual observations against MJD"></canvas>
+            <div class="plot-footer">
+              <span id="residual-cursor">CURSOR: --</span>
+              <span id="residual-extrema">RANGE: --</span>
+            </div>
+          </article>
+
+          <article class="panel chart waterfall-display">
+            <div class="panel-title">
+              <div>
+                <h2>NANOGRAV DISPERSION-MEASURE VARIATIONS</h2>
+                <span>RELEASED DMX BINS / PC CM^-3 RELATIVE CONTRIBUTION</span>
+              </div>
+              <p id="waterfall-readout" class="right-note">--</p>
+            </div>
+            <canvas id="waterfall-canvas" aria-label="NANOGrav dispersion measure variation product"></canvas>
+            <div class="plot-footer">
+              <span>CYAN: RELEASED DMX VALUES / SHADE: REPORTED UNCERTAINTY</span>
+              <span>DYNAMIC SPECTRA ARE NOT PRESENT IN THIS RELEASE</span>
+            </div>
+          </article>
         </section>
 
-        <section class="control-group">
-          <h3>Observation</h3>
-          <label>
-            <span>Duration <output id="duration-value">3.0 h</output></span>
-            <input id="duration" type="range" min="0.5" max="12" step="0.5" value="3">
-          </label>
-          <label>
-            <span>TOA cadence <output id="cadence-value">6.0 min</output></span>
-            <input id="cadence" type="range" min="1" max="30" step="1" value="6">
-          </label>
-          <label>
-            <span>Timing noise <output id="noise-value">0.060 ms</output></span>
-            <input id="noise" type="range" min="0" max="1.2" step="0.01" value="0.06">
-          </label>
-        </section>
+        <aside class="diagnostics" aria-label="Model diagnostics">
+          <article class="panel chart profile-display">
+            <div class="panel-title">
+              <div>
+                <h2>SIMULATED PULSE TEMPLATE</h2>
+                <span>AVAILABLE ONLY WITH MODEL OVERLAY</span>
+              </div>
+            </div>
+            <canvas id="profile-canvas" aria-label="Optional simulated folded pulse template"></canvas>
+          </article>
 
-        <section class="control-group">
-          <h3>Interstellar Medium</h3>
-          <label>
-            <span>Dispersion measure <output id="dm-value">56 pc cm^-3</output></span>
-            <input id="dm" type="range" min="0" max="500" step="1" value="56">
-          </label>
-          <label>
-            <span>Centre frequency <output id="freq-value">1400 MHz</output></span>
-            <input id="freq" type="range" min="350" max="2400" step="10" value="1400">
-          </label>
-          <label>
-            <span>Bandwidth <output id="bandwidth-value">300 MHz</output></span>
-            <input id="bandwidth" type="range" min="30" max="900" step="10" value="300">
-          </label>
-        </section>
+          <article class="panel equation-card">
+            <div class="panel-title">
+              <h2>MODEL KERNEL</h2>
+              <span>OPTIONAL OVERLAY ONLY</span>
+            </div>
+            <dl>
+              <dt>ROTATIONAL PHASE</dt>
+              <dd>N(t) = N0 + nu(t - t0) + 0.5 nudot(t - t0)^2</dd>
+              <dt>DISPERSION</dt>
+              <dd>Delta t = D DM (nu_low^-2 - nu_high^-2)</dd>
+              <dt>CONSTANT</dt>
+              <dd>D = 4.148808e3 s MHz^2 pc^-1 cm^3</dd>
+              <dt>GLITCH</dt>
+              <dd>Delta nu = nu (Delta nu / nu), t &gt;= t_g</dd>
+            </dl>
+          </article>
 
-        <section class="control-group">
-          <h3>Glitch</h3>
-          <label>
-            <span>Glitch epoch <output id="glitch-epoch-value">55%</output></span>
-            <input id="glitchEpoch" type="range" min="5" max="95" step="1" value="55">
-          </label>
-          <label>
-            <span>Frequency jump <output id="glitch-size-value">3.0 ppm</output></span>
-            <input id="glitchSize" type="range" min="0" max="30" step="0.1" value="3">
-          </label>
-        </section>
+          <article class="panel event-card">
+            <div class="panel-title">
+              <h2>EVENT STREAM</h2>
+              <span>DATA / WORKER TELEMETRY</span>
+            </div>
+            <ol id="event-log" aria-live="polite">
+              <li>Loading NANOGrav observational bundle...</li>
+            </ol>
+          </article>
 
-        <button id="export-button" class="export-button" type="button">Export synthetic TOAs</button>
-      </aside>
+          <article class="panel scope-card">
+            <div class="panel-title">
+              <h2>SCOPE</h2>
+              <span>DATA BOUNDARY</span>
+            </div>
+            <p>
+              Cyan products are released NANOGrav 11-year residual and DMX values. Timing
+              residuals depend on the fitted timing model; precision inference requires refitting
+              the original arrival times. Amber traces are optional simulated perturbations only.
+            </p>
+          </article>
+        </aside>
+      </main>
 
-      <section class="plot-grid">
-        <article class="panel plot-panel large">
-          <div class="panel-heading">
-            <h2>Folded Pulse Profile</h2>
-            <span id="profile-note">64 phase bins</span>
-          </div>
-          <canvas id="profile-canvas" width="900" height="380" aria-label="Folded pulse profile plot"></canvas>
-        </article>
-
-        <article class="panel plot-panel">
-          <div class="panel-heading">
-            <h2>Timing Residuals</h2>
-            <span>observed minus model</span>
-          </div>
-          <canvas id="residual-canvas" width="620" height="360" aria-label="Timing residual plot"></canvas>
-        </article>
-
-        <article class="panel plot-panel">
-          <div class="panel-heading">
-            <h2>Dispersed Radio Pulse</h2>
-            <span>frequency-time sweep</span>
-          </div>
-          <canvas id="waterfall-canvas" width="620" height="360" aria-label="Dispersion waterfall plot"></canvas>
-        </article>
-
-        <article class="panel model-panel">
-          <div class="panel-heading">
-            <h2>Timing Model</h2>
-            <span>simplified assumptions</span>
-          </div>
-          <div class="equation-grid">
-            <p><strong>Rotational phase</strong><span>phi(t) = phi0 + nu t + 0.5 nudot t^2</span></p>
-            <p><strong>Dispersion delay</strong><span>Delta t = 4.148808 ms DM (nu1^-2 - nu2^-2)</span></p>
-            <p><strong>Residual</strong><span>R = TOA_observed - TOA_model</span></p>
-            <p><strong>Glitch</strong><span>nu -> nu + Delta nu after selected epoch</span></p>
-          </div>
-        </article>
-      </section>
-    </main>
-    <footer class="site-footer">Biswajit@2026</footer>
-
-    <script src="assets/js/app.js"></script>
+      <footer class="status-bar">
+        <span>PTL / OBSERVATION-FIRST CONSOLE</span>
+        <span id="status-message">LOADING NANOGRAV OBSERVATIONS</span>
+        <span>CANVAS RENDER / WORKER COMPUTE / ZERO BUILD</span>
+      </footer>
+    </div>
   </body>
 </html>

@@ -1,134 +1,190 @@
 # Pulsar Timing Lab
 
-Interactive browser laboratory for pulsar pulse folding, timing residuals, dispersion delay, and glitch signatures.
+**An observation-first browser instrument for NANOGrav timing residuals, dispersion-measure
+variations and controlled pulsar perturbation experiments.**
 
-**Author:** Biswajit Jana
+Pulsar Timing Lab presents published NANOGrav 11-year data products before any generated
+quantity. The primary plots are released daily-average timing residual samples and released
+DMX values for selected millisecond pulsars. A deliberately separate simulation overlay adds
+rotational phase, cold-plasma dispersion calculations, red/white timing noise and optional
+frequency-step glitches without being confused for telescope data.
 
-## Research Motivation
+## Observational Data Product
 
-Pulsars are rapidly rotating neutron stars whose radio pulses can act as high-precision astrophysical clocks. Small deviations in pulse arrival times can encode spin-down, timing noise, orbital motion, interstellar dispersion, and sudden rotational glitches. This project provides an interactive, research-style visual laboratory for understanding how simplified pulsar timing effects appear in folded profiles, timing residuals, and radio frequency-time plots.
+The bundled observation asset is derived from the official NANOGrav archive:
 
-## Scientific Background
+```text
+https://data.nanograv.org/static/data/res_dmx_nanograv_11y.tgz
+```
 
-The lab models a pulsar as a rotating phase clock with a narrow emission beam. Observed pulse times of arrival are compared with a simplified timing model. A dispersion measure term demonstrates how the ionised interstellar medium delays lower radio frequencies more strongly than higher frequencies. A glitch term introduces a sudden fractional spin-frequency jump after a selected epoch.
+The asset builder reads the archive members `res_ave/<pulsar>.ares` and
+`dmx_vals/<pulsar>.dmx` for:
 
-This first version is an educational and exploratory simulator. It is not a replacement for timing packages such as TEMPO, TEMPO2, PINT, or enterprise-grade pulsar timing array pipelines.
+| Pulsar | Released residual samples | Released DMX bins |
+| --- | ---: | ---: |
+| J1713+0747 | 789 | 209 |
+| J1909-3744 | 451 | 166 |
+| B1937+21 | 460 | 165 |
 
-## Core Model
+No timing-model fit or subtraction is performed by this application. Released residual
+values, uncertainties, telescope labels, backends and observing bands are preserved in the
+JSON bundle and CSV export. Residual epochs are supplied by the release as decimal years; the
+plot computes a fractional-calendar-year MJD only for its display axis and retains the
+original decimal year for export. DMX epochs are plotted directly from the released MJD
+values.
 
-The rotational phase is approximated as:
+NANOGrav explicitly cautions that timing residuals depend on the fitted timing model. New
+astrophysical inference must re-fit original pulse arrival times and timing-model parameters,
+rather than treating these plotted residual values as model-independent measurements.
+
+## Instrument Capabilities
+
+- NANOGrav timing-residual display with reported uncertainty envelope and data playback cursor.
+- NANOGrav DMX time series with reported uncertainties and native MJD epochs.
+- Selection of three published high-precision pulsars from the bundled release product.
+- Optional amber simulation overlay, off by default and visually distinguished from observations.
+- Quadratic spin-phase model with editable period and frequency derivative.
+- Cold-plasma band-delay calculator using explicit MHz/second units.
+- Fourier-synthesised red timing-noise and independent white-noise injections.
+- Optional sudden rotational glitch represented by a fractional frequency step.
+- Worker-generated CSV export preserving observational columns and, when enabled, separate
+  simulated-injection columns.
+- Zero-build static deployment with a dedicated numerical Web Worker and Canvas rendering loop.
+
+## Architecture
+
+```text
+Pulsar Timing Lab/
+  index.html
+  assets/
+    css/style.css
+    js/app.js                       Canvas rendering and data controls
+    js/physicsWorker.js             Data loading and optional physical model
+  data/observations/
+    nanograv_11yr_residuals.json   Browser observation bundle
+    nanograv_11yr_source_metadata.json
+    res_dmx_nanograv_11y.tgz       Retrieved official source archive
+  docs/
+    equations.md
+    validation.md
+  tools/
+    fetch_nanograv_observations.py
+    generate_synthetic_toas.py
+    validate_model.py
+    validate_observations.py
+```
+
+All JSON loading, numerical arrays, stochastic generation, glitch calculation and export
+assembly occur in `assets/js/physicsWorker.js`. The main thread performs input handling and
+device-pixel-ratio-aware Canvas draws. It never invents a replacement data series if the
+observation asset is unavailable.
+
+## Optional Physics Overlay
+
+The overlay is explicitly a comparison/injection model and is disabled on initial load.
+
+### Rotational phase
 
 ```text
 N(t) = N0 + nu (t - t0) + 0.5 nudot (t - t0)^2
 ```
 
-The dispersion delay between two observing frequencies is:
+Here `N` is rotational phase in cycles, `nu` is frequency in `Hz`, and `nudot` is in
+`Hz s^-1`. The optional overlay is sampled at the released residual epochs.
+
+### Sudden glitch
 
 ```text
-Delta t_ms = 4.148808e3 DM (nu_low^-2 - nu_high^-2)
+Delta nu = nu (Delta nu / nu)
+Delta N(t) = Delta nu (t - t_g),  t >= t_g
+R_glitch(t) = -Delta N(t) / nu_model(t)
 ```
 
-where `DM` is in `pc cm^-3` and frequency is in `MHz`.
+A positive frequency step produces negative post-event `O-C` residuals when the model omits
+the event.
 
-Timing residuals are shown as:
+### Cold-plasma dispersion calculator
 
 ```text
-R = TOA_observed - TOA_model
+Delta t = D DM (nu_low^-2 - nu_high^-2)
+D = 4.148808e3 s MHz^2 pc^-1 cm^3
 ```
 
-The glitch model is represented as:
+With receiver frequencies in `MHz` and `DM` in `pc cm^-3`, the result is calculated in
+seconds and displayed in milliseconds. This calculator does not claim to reconstruct a
+frequency-time observation absent from the NANOGrav residual/DMX release.
+
+### Timing-noise injection
+
+The optional red-noise series is a finite Fourier construction with modal amplitude scaling:
 
 ```text
-nu -> nu + Delta nu
-Delta nu / nu = glitch_ppm * 1e-6
+A(k) proportional to k^(-gamma / 2)
 ```
 
-If a frequency step is left unmodelled, the leading residual trend after the glitch epoch is approximated as:
+It is normalised to the selected RMS before independent Gaussian white noise is added.
 
-```text
-R_glitch ~= - (Delta nu / nu) (t - tg)
-```
+## Running The Instrument
 
-## Main Features
-
-- Interactive folded pulse profile with pulse width control.
-- Timing residual plot with spin-down, stochastic timing noise, and glitch signature.
-- Frequency-time waterfall showing cold plasma dispersion delay.
-- Sliders for period, pulse width, spin-down, duration, cadence, noise, DM, centre frequency, bandwidth, glitch epoch, and glitch size.
-- Export of synthetic time-of-arrival data as CSV.
-- Static HTML/CSS/JavaScript implementation suitable for GitHub Pages.
-
-## Research Use Cases
-
-- Teaching how pulse phase, TOAs, residuals, dispersion, and glitches connect in a timing workflow.
-- Generating lightweight synthetic timing residuals for testing plotting, outlier handling, and residual diagnostics.
-- Demonstrating why real pulsar timing requires barycentric corrections, propagation delays, clock standards, and fitted timing models.
-- Serving as a front-end concept prototype before integrating a validated timing engine such as PINT or TEMPO2.
-
-## Project Structure
-
-```text
-Pulsar Timing Lab/
-  index.html
-  README.md
-  LICENSE
-  assets/
-    css/
-      style.css
-    js/
-      app.js
-  docs/
-    equations.md
-    validation.md
-    image_prompt.md
-```
-
-## README Image Prompt
-
-A README hero image prompt is provided in [`docs/image_prompt.md`](docs/image_prompt.md). It is written for generating a polished scientific visual that can be added later as a repository banner.
-
-## Running Locally
-
-Open `index.html` in a browser. No build step is required.
-
-Optional Python data generation and validation:
+Serve the directory over HTTP so that the browser can load the Worker and local data asset:
 
 ```bash
+python -m http.server 8000
+```
+
+Open `http://localhost:8000/`. Once the observation JSON is present, operation does not
+require network access or a build step.
+
+To recreate the bundled observation JSON from the official archive:
+
+```bash
+python tools/fetch_nanograv_observations.py
+```
+
+This acquisition step requires internet access.
+
+## CSV Export
+
+With the simulation overlay disabled, `EXPORT DATA` contains:
+
+```text
+pulsar,decimal_year,display_mjd,telescope,backend,band,
+released_residual_us,released_uncertainty_us
+```
+
+When the overlay is enabled, two clearly labelled columns are appended:
+
+```text
+simulated_injection_us,simulated_glitch_component_us
+```
+
+## Verification
+
+Run the observation integrity check and the analytic model invariant tests:
+
+```bash
+python tools/validate_observations.py
 python tools/generate_synthetic_toas.py
 python tools/validate_model.py
 ```
 
-## Validation Plan
+The validation protocol is described in `docs/validation.md`. Passing these checks confirms
+asset structure and declared numerical conventions; it is not a timing-solution fit.
 
-- Set glitch size to zero and verify that the residual curve no longer contains a post-epoch step.
-- Set dispersion measure to zero and verify that the waterfall pulse aligns vertically.
-- Increase bandwidth at fixed DM and verify that the frequency-dependent delay increases.
-- Increase timing noise and verify that RMS residuals increase.
-- Confirm that exported CSV rows match the plotted synthetic residual points.
+## References
 
-## Limitations
+Arzoumanian, Z. et al. (2018) 'The NANOGrav 11-year data set: High-precision timing of 45
+millisecond pulsars', *The Astrophysical Journal Supplement Series*, 235(2), p. 37.
+doi: [10.3847/1538-4365/aab5b0](https://doi.org/10.3847/1538-4365/aab5b0).
 
-- Uses a simplified phase model and illustrative noise model.
-- Does not include barycentric correction, binary orbital timing, Shapiro delay, Einstein delay, profile evolution, scintillation, calibration errors, or telescope/backend response.
-- Glitch recovery is not yet modelled.
-- The simulated data are synthetic and should not be interpreted as measurements of a real pulsar.
+Lorimer, D.R. and Kramer, M. (2005) *Handbook of Pulsar Astronomy*. Cambridge:
+Cambridge University Press.
 
-## Research References
+Hobbs, G.B., Edwards, R.T. and Manchester, R.N. (2006) 'TEMPO2, a new pulsar-timing
+package-I. An overview', *Monthly Notices of the Royal Astronomical Society*, 369(2),
+pp. 655-672.
 
-- Edwards, Hobbs & Manchester, 2006, *TEMPO2, a new pulsar timing package. II: The timing model and precision estimates*.
-- Hobbs, Edwards & Manchester, 2006, *TEMPO2, a new pulsar-timing package. I: An overview*.
-- Lorimer & Kramer, 2005, *Handbook of Pulsar Astronomy*.
-- Keith et al., 2013, work on dispersion-measure corrections in precision pulsar timing.
+## Licence
 
-## Future Upgrades
-
-- Add binary pulsar Roemer delay and orbital parameter controls.
-- Add glitch recovery with exponential relaxation.
-- Add period search and phase folding from generated photon/event streams.
-- Add a Python notebook validating the browser model.
-- Add real public pulsar catalogue examples with proper citations.
-- Add mobile-optimised export and screenshot tools.
-
-## Suggested GitHub Topics
-
-`astrophysics`, `pulsars`, `neutron-stars`, `timing`, `signal-processing`, `radio-astronomy`, `scientific-visualisation`, `javascript`, `github-pages`, `simulation`
+Application source is released under the MIT Licence; see `LICENSE`. The NANOGrav data
+product retains its source-release attribution and provenance.

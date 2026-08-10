@@ -1,345 +1,638 @@
-const controls = {
-  period: document.querySelector("#period"),
-  width: document.querySelector("#width"),
-  spindown: document.querySelector("#spindown"),
-  duration: document.querySelector("#duration"),
-  cadence: document.querySelector("#cadence"),
-  noise: document.querySelector("#noise"),
-  dm: document.querySelector("#dm"),
-  freq: document.querySelector("#freq"),
-  bandwidth: document.querySelector("#bandwidth"),
-  glitchEpoch: document.querySelector("#glitchEpoch"),
-  glitchSize: document.querySelector("#glitchSize"),
-};
+(() => {
+  "use strict";
 
-const outputs = {
-  period: document.querySelector("#period-value"),
-  width: document.querySelector("#width-value"),
-  spindown: document.querySelector("#spindown-value"),
-  duration: document.querySelector("#duration-value"),
-  cadence: document.querySelector("#cadence-value"),
-  noise: document.querySelector("#noise-value"),
-  dm: document.querySelector("#dm-value"),
-  freq: document.querySelector("#freq-value"),
-  bandwidth: document.querySelector("#bandwidth-value"),
-  glitchEpoch: document.querySelector("#glitch-epoch-value"),
-  glitchSize: document.querySelector("#glitch-size-value"),
-  summaryPeriod: document.querySelector("#summary-period"),
-  summaryDm: document.querySelector("#summary-dm"),
-  summaryRms: document.querySelector("#summary-rms"),
-  summaryGlitch: document.querySelector("#summary-glitch"),
-};
+  const DEFAULTS = Object.freeze({
+    pulsar: "J1713+0747",
+    playbackRate: 24,
+    modelOverlay: false,
+    periodMs: 4.57,
+    nudotScale: -0.4,
+    pulseWidthMs: 0.25,
+    dm: 15.99,
+    centreFrequencyMHz: 1400,
+    bandwidthMHz: 800,
+    redNoiseUs: 0.3,
+    redSpectralIndex: 4,
+    whiteNoiseUs: 0.05,
+    glitchEnabled: false,
+    glitchEpochFraction: 58,
+    glitchPpm: 0.001,
+  });
 
-const canvases = {
-  profile: document.querySelector("#profile-canvas"),
-  residual: document.querySelector("#residual-canvas"),
-  waterfall: document.querySelector("#waterfall-canvas"),
-};
+  const controls = Object.fromEntries(
+    Object.keys(DEFAULTS).map((id) => [id, document.getElementById(id)])
+  );
+  const outputs = {
+    playbackRate: document.getElementById("playbackRate-value"),
+    modelOverlay: document.getElementById("modelOverlay-value"),
+    periodMs: document.getElementById("periodMs-value"),
+    nudotScale: document.getElementById("nudotScale-value"),
+    pulseWidthMs: document.getElementById("pulseWidthMs-value"),
+    dm: document.getElementById("dm-value"),
+    centreFrequencyMHz: document.getElementById("centreFrequencyMHz-value"),
+    bandwidthMHz: document.getElementById("bandwidthMHz-value"),
+    redNoiseUs: document.getElementById("redNoiseUs-value"),
+    redSpectralIndex: document.getElementById("redSpectralIndex-value"),
+    whiteNoiseUs: document.getElementById("whiteNoiseUs-value"),
+    glitchEpochFraction: document.getElementById("glitchEpochFraction-value"),
+    glitchPpm: document.getElementById("glitchPpm-value"),
+  };
+  const readouts = {
+    utc: document.getElementById("utc-clock"),
+    engineIndicator: document.getElementById("engine-indicator"),
+    engineState: document.getElementById("engine-state"),
+    frameRate: document.getElementById("frame-rate"),
+    cursorMjd: document.getElementById("cursor-mjd"),
+    frequency: document.getElementById("frequency-readout"),
+    nudot: document.getElementById("nudot-readout"),
+    dispersion: document.getElementById("dispersion-readout"),
+    frequencyBand: document.getElementById("frequency-band-readout"),
+    rms: document.getElementById("rms-readout"),
+    toaCount: document.getElementById("toa-count-readout"),
+    glitch: document.getElementById("glitch-readout"),
+    deltaFrequency: document.getElementById("delta-frequency-readout"),
+    compute: document.getElementById("compute-readout"),
+    residualCursor: document.getElementById("residual-cursor"),
+    residualExtrema: document.getElementById("residual-extrema"),
+    dmx: document.getElementById("waterfall-readout"),
+    status: document.getElementById("status-message"),
+    events: document.getElementById("event-log"),
+  };
+  const buttons = {
+    play: document.getElementById("play-button"),
+    reseed: document.getElementById("reseed-button"),
+    export: document.getElementById("export-button"),
+    reset: document.getElementById("reset-button"),
+  };
+  const modelParameters = document.getElementById("model-parameters");
 
-let latestToas = [];
+  class CanvasSurface {
+    constructor(id) {
+      this.canvas = document.getElementById(id);
+      this.context = this.canvas.getContext("2d", { alpha: false, desynchronized: true });
+      this.width = 0;
+      this.height = 0;
+      this.ratio = 1;
+    }
 
-function value(id) {
-  return Number(controls[id].value);
-}
-
-function seededNoise(index, seed = 7) {
-  const x = Math.sin(index * 127.1 + seed * 311.7) * 43758.5453;
-  return (x - Math.floor(x)) * 2 - 1;
-}
-
-function gaussian(x, mu, sigma) {
-  const dx = Math.min(Math.abs(x - mu), 1 - Math.abs(x - mu));
-  return Math.exp(-0.5 * (dx / sigma) ** 2);
-}
-
-function resizeCanvas(canvas) {
-  const ratio = window.devicePixelRatio || 1;
-  const width = Math.max(320, canvas.clientWidth);
-  const height = Math.max(240, Math.round(width * Number(canvas.height) / Number(canvas.width)));
-  canvas.width = Math.round(width * ratio);
-  canvas.height = Math.round(height * ratio);
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  return { ctx, width, height };
-}
-
-function drawFrame(ctx, width, height, titleX = "x", titleY = "y") {
-  const pad = { left: 54, right: 18, top: 22, bottom: 42 };
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#11141b";
-  ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = "rgba(255,255,255,0.09)";
-  ctx.lineWidth = 1;
-
-  for (let i = 0; i <= 5; i += 1) {
-    const y = pad.top + (height - pad.top - pad.bottom) * i / 5;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(width - pad.right, y);
-    ctx.stroke();
+    prepare() {
+      const bounds = this.canvas.getBoundingClientRect();
+      const width = Math.max(10, Math.round(bounds.width));
+      const height = Math.max(10, Math.round(bounds.height));
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      if (width !== this.width || height !== this.height || ratio !== this.ratio) {
+        this.width = width;
+        this.height = height;
+        this.ratio = ratio;
+        this.canvas.width = Math.round(width * ratio);
+        this.canvas.height = Math.round(height * ratio);
+      }
+      this.context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      this.context.fillStyle = "#080c15";
+      this.context.fillRect(0, 0, width, height);
+      return { ctx: this.context, width, height };
+    }
   }
 
-  ctx.fillStyle = "#aab4c3";
-  ctx.font = "12px system-ui";
-  ctx.fillText(titleY, 12, pad.top + 6);
-  ctx.fillText(titleX, width - 78, height - 12);
-  return pad;
-}
+  const surfaces = {
+    residual: new CanvasSurface("residual-canvas"),
+    dmx: new CanvasSurface("waterfall-canvas"),
+    profile: new CanvasSurface("profile-canvas"),
+  };
 
-function plotLine(canvas, points, options) {
-  const { ctx, width, height } = resizeCanvas(canvas);
-  const pad = drawFrame(ctx, width, height, options.xLabel, options.yLabel);
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const xMin = options.xMin ?? Math.min(...xs);
-  const xMax = options.xMax ?? Math.max(...xs);
-  const yMin = options.yMin ?? Math.min(...ys);
-  const yMax = options.yMax ?? Math.max(...ys);
-  const spanY = yMax - yMin || 1;
-  const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
+  const state = {
+    worker: null,
+    requestId: 0,
+    seed: 48271,
+    snapshot: null,
+    playing: true,
+    playback: null,
+    debounce: 0,
+    events: [],
+    renderTime: performance.now(),
+    frameCounter: 0,
+    frameWindowStart: performance.now(),
+  };
 
-  const px = (x) => pad.left + ((x - xMin) / (xMax - xMin || 1)) * plotW;
-  const py = (y) => pad.top + (1 - (y - yMin) / spanY) * plotH;
+  function numericValue(id) {
+    return Number(controls[id].value);
+  }
 
-  if (options.thresholds) {
-    for (const threshold of options.thresholds) {
-      const y = py(threshold.value);
-      ctx.strokeStyle = threshold.color;
+  function parameterPayload() {
+    return {
+      pulsar: controls.pulsar.value,
+      playbackRecordsPerSecond: numericValue("playbackRate"),
+      modelOverlay: controls.modelOverlay.checked,
+      periodMs: numericValue("periodMs"),
+      nudotHzPerSecond: numericValue("nudotScale") * 1e-15,
+      pulseWidthMs: numericValue("pulseWidthMs"),
+      dispersionMeasure: numericValue("dm"),
+      centreFrequencyMHz: numericValue("centreFrequencyMHz"),
+      bandwidthMHz: numericValue("bandwidthMHz"),
+      redNoiseRmsSeconds: numericValue("redNoiseUs") * 1e-6,
+      redSpectralIndex: numericValue("redSpectralIndex"),
+      whiteNoiseRmsSeconds: numericValue("whiteNoiseUs") * 1e-6,
+      glitchEnabled: controls.glitchEnabled.checked,
+      glitchEpochFraction: numericValue("glitchEpochFraction") / 100,
+      glitchFractionalStep: numericValue("glitchPpm") * 1e-6,
+    };
+  }
+
+  function formatInputLabels() {
+    outputs.playbackRate.textContent = `${numericValue("playbackRate").toFixed(0)} records/s`;
+    outputs.modelOverlay.textContent = controls.modelOverlay.checked ? "ON" : "OFF";
+    outputs.periodMs.textContent = `${numericValue("periodMs").toFixed(3)} ms`;
+    outputs.nudotScale.textContent = `${numericValue("nudotScale").toFixed(2)} x10^-15 Hz/s`;
+    outputs.pulseWidthMs.textContent = `${numericValue("pulseWidthMs").toFixed(2)} ms`;
+    outputs.dm.textContent = `${numericValue("dm").toFixed(2)} pc cm^-3`;
+    outputs.centreFrequencyMHz.textContent = `${numericValue("centreFrequencyMHz").toFixed(0)} MHz`;
+    outputs.bandwidthMHz.textContent = `${numericValue("bandwidthMHz").toFixed(0)} MHz`;
+    outputs.redNoiseUs.textContent = `${numericValue("redNoiseUs").toFixed(2)} us`;
+    outputs.redSpectralIndex.textContent = numericValue("redSpectralIndex").toFixed(1);
+    outputs.whiteNoiseUs.textContent = `${numericValue("whiteNoiseUs").toFixed(2)} us`;
+    outputs.glitchEpochFraction.textContent = `${numericValue("glitchEpochFraction").toFixed(0)}%`;
+    outputs.glitchPpm.textContent = `${numericValue("glitchPpm").toFixed(4)} ppm`;
+    modelParameters.classList.toggle("inactive", !controls.modelOverlay.checked);
+  }
+
+  function setEngineState(label, style, message) {
+    readouts.engineState.textContent = label;
+    readouts.engineIndicator.className = `indicator ${style}`;
+    if (message) {
+      readouts.status.textContent = message;
+    }
+  }
+
+  function addEvent(message) {
+    const stamp = new Date().toISOString().slice(11, 19);
+    state.events.unshift(`${stamp}  ${message}`);
+    state.events.length = Math.min(state.events.length, 8);
+    readouts.events.replaceChildren(
+      ...state.events.map((text) => {
+        const item = document.createElement("li");
+        item.textContent = text;
+        return item;
+      })
+    );
+  }
+
+  function configure(immediate = false) {
+    formatInputLabels();
+    if (!state.worker) {
+      return;
+    }
+    clearTimeout(state.debounce);
+    const dispatch = () => {
+      state.requestId += 1;
+      setEngineState("LOADING", "computing", "LOADING NANOGRAV RELEASE PRODUCTS / COMPUTING VIEW");
+      state.worker.postMessage({
+        type: "configure",
+        requestId: state.requestId,
+        seed: state.seed,
+        parameters: parameterPayload(),
+      });
+    };
+    if (immediate) {
+      dispatch();
+    } else {
+      state.debounce = window.setTimeout(dispatch, 35);
+    }
+  }
+
+  function updateTelemetry(telemetry) {
+    readouts.frequency.textContent = telemetry.pulsar;
+    readouts.nudot.textContent = "NANOGRAV 11Y / RELEASED";
+    readouts.dispersion.textContent =
+      `${(telemetry.dmxMinimum * 1000).toFixed(3)} to ${(telemetry.dmxMaximum * 1000).toFixed(3)}`;
+    readouts.frequencyBand.textContent = `x10^-3 PC CM^-3 / ${telemetry.dmxCount} DMX BINS`;
+    readouts.rms.textContent = formatResidual(telemetry.observedRmsUs);
+    const spanYears = (telemetry.lastMjd - telemetry.firstMjd) / 365.25;
+    readouts.toaCount.textContent = `${telemetry.residualCount} SAMPLES / ${spanYears.toFixed(2)} YR`;
+    if (telemetry.modelOverlay) {
+      readouts.glitch.textContent = telemetry.glitchEnabled ? `MJD ${telemetry.glitchMjd.toFixed(2)}` : "MODEL ON";
+      readouts.deltaFrequency.textContent = telemetry.glitchEnabled
+        ? `DELTA NU ${telemetry.deltaFrequencyHz.toExponential(3)} HZ`
+        : `NU ${telemetry.spinFrequencyHz.toFixed(5)} HZ / NO GLITCH`;
+    } else {
+      readouts.glitch.textContent = "OFF";
+      readouts.deltaFrequency.textContent = "RELEASED DATA ONLY";
+    }
+    readouts.compute.textContent = `${telemetry.computeMilliseconds.toFixed(2)} ms`;
+    readouts.residualExtrema.textContent =
+      `RANGE: ${formatResidual(telemetry.minimumResidualUs)} TO ${formatResidual(telemetry.maximumResidualUs)}`;
+    readouts.dmx.textContent =
+      `${telemetry.dmxCount} BINS / ${(telemetry.dmxMinimum * 1000).toFixed(3)} TO ` +
+      `${(telemetry.dmxMaximum * 1000).toFixed(3)} x10^-3`;
+  }
+
+  function handleWorkerMessage(event) {
+    const message = event.data;
+    if (message.type === "products") {
+      if (message.requestId !== state.requestId) {
+        return;
+      }
+      state.snapshot = message;
+      updateTelemetry(message.telemetry);
+      setEngineState("ONLINE", "ready", "NANOGRAV OBSERVATIONS LOADED / PRODUCTS CURRENT");
+      const overlay = message.telemetry.modelOverlay ? " / MODEL OVERLAY ON" : "";
+      addEvent(
+        `${message.metadata.pulsar}: ${message.telemetry.residualCount} residuals + ` +
+        `${message.telemetry.dmxCount} DMX bins${overlay}`
+      );
+      return;
+    }
+    if (message.type === "playback") {
+      state.playback = message;
+      readouts.cursorMjd.textContent = message.mjd.toFixed(4);
+      readouts.residualCursor.textContent =
+        `CURSOR: MJD ${message.mjd.toFixed(4)} / RELEASED ${formatResidual(message.residualUs)}`;
+      return;
+    }
+    if (message.type === "csv") {
+      downloadCsv(message.content, message.filename);
+      addEvent(`Exported ${message.rowCount} released residual samples`);
+      return;
+    }
+    if (message.type === "dataError") {
+      if (message.requestId !== state.requestId) {
+        return;
+      }
+      setEngineState("FAILED", "error", "NANOGRAV DATA UNAVAILABLE / SERVE PROJECT OVER HTTP");
+      addEvent(`Data load failed: ${message.message}`);
+      return;
+    }
+    if (message.type === "warning") {
+      addEvent(message.message);
+    }
+  }
+
+  function downloadCsv(content, filename) {
+    const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function formatResidual(valueUs) {
+    const magnitude = Math.abs(valueUs);
+    if (magnitude >= 1000000) {
+      return `${(valueUs / 1000000).toFixed(3)} s`;
+    }
+    if (magnitude >= 1000) {
+      return `${(valueUs / 1000).toFixed(3)} ms`;
+    }
+    return `${valueUs.toFixed(3)} us`;
+  }
+
+  function abbreviatedResidual(valueUs) {
+    const magnitude = Math.abs(valueUs);
+    if (magnitude >= 1000000) {
+      return `${(valueUs / 1000000).toFixed(1)}s`;
+    }
+    if (magnitude >= 1000) {
+      return `${(valueUs / 1000).toFixed(1)}ms`;
+    }
+    return `${valueUs.toFixed(1)}us`;
+  }
+
+  function chartBounds(ctx, width, height, xTicks, yTicks, xLabel, yLabel) {
+    const margins = { left: 70, top: 16, right: 18, bottom: 41 };
+    const plotWidth = Math.max(1, width - margins.left - margins.right);
+    const plotHeight = Math.max(1, height - margins.top - margins.bottom);
+    ctx.strokeStyle = "rgba(85, 113, 142, 0.22)";
+    ctx.lineWidth = 1;
+    for (let index = 0; index <= xTicks; index += 1) {
+      const x = margins.left + plotWidth * index / xTicks;
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, margins.top);
+      ctx.lineTo(x + 0.5, margins.top + plotHeight);
+      ctx.stroke();
+    }
+    for (let index = 0; index <= yTicks; index += 1) {
+      const y = margins.top + plotHeight * index / yTicks;
+      ctx.beginPath();
+      ctx.moveTo(margins.left, y + 0.5);
+      ctx.lineTo(margins.left + plotWidth, y + 0.5);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#7f93a9";
+    ctx.font = '11px "Roboto Mono", "Cascadia Mono", Consolas, monospace';
+    ctx.fillText(yLabel, 10, margins.top + 8);
+    ctx.textAlign = "right";
+    ctx.fillText(xLabel, width - margins.right, height - 8);
+    ctx.textAlign = "left";
+    return { ...margins, plotWidth, plotHeight };
+  }
+
+  function writeAxisTicks(ctx, box, xMin, xMax, yMin, yMax, xTicks, yTicks, formatX, formatY) {
+    ctx.fillStyle = "#7f93a9";
+    ctx.font = '10px "Roboto Mono", "Cascadia Mono", Consolas, monospace';
+    for (let index = 0; index <= xTicks; index += 1) {
+      const ratio = index / xTicks;
+      const x = box.left + ratio * box.plotWidth;
+      ctx.textAlign = index === 0 ? "left" : index === xTicks ? "right" : "center";
+      ctx.fillText(formatX(xMin + ratio * (xMax - xMin)), x, box.top + box.plotHeight + 19);
+    }
+    ctx.textAlign = "right";
+    for (let index = 0; index <= yTicks; index += 1) {
+      const ratio = index / yTicks;
+      const y = box.top + ratio * box.plotHeight;
+      ctx.fillText(formatY(yMax - ratio * (yMax - yMin)), box.left - 9, y + 3);
+    }
+    ctx.textAlign = "left";
+  }
+
+  function plotPath(ctx, xValues, yValues, coordinate, stroke, width, dash = []) {
+    if (!yValues || !yValues.length) {
+      return;
+    }
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    for (let index = 0; index < xValues.length; index += 1) {
+      const x = coordinate.x(xValues[index]);
+      const y = coordinate.y(yValues[index]);
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawUncertaintyBand(ctx, xValues, values, uncertainties, coordinate, fill) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    for (let index = 0; index < values.length; index += 1) {
+      const x = coordinate.x(xValues[index]);
+      const y = coordinate.y(values[index] + uncertainties[index]);
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    for (let index = values.length - 1; index >= 0; index -= 1) {
+      ctx.lineTo(coordinate.x(xValues[index]), coordinate.y(values[index] - uncertainties[index]));
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawResiduals() {
+    const { ctx, width, height } = surfaces.residual.prepare();
+    if (!state.snapshot) {
+      drawWaiting(ctx, width, height, "AWAITING NANOGRAV RESIDUALS");
+      return;
+    }
+    const data = state.snapshot.residuals;
+    const telemetry = state.snapshot.telemetry;
+    const xMin = data.mjd[0];
+    const xMax = data.mjd[data.mjd.length - 1];
+    const yLimit = Math.max(
+      Math.abs(telemetry.minimumResidualUs),
+      Math.abs(telemetry.maximumResidualUs),
+      0.01
+    ) * 1.1;
+    const box = chartBounds(ctx, width, height, 5, 5, "DISPLAY MJD", "US");
+    const coordinate = {
+      x: (value) => box.left + (value - xMin) / (xMax - xMin || 1) * box.plotWidth,
+      y: (value) => box.top + (yLimit - value) / (2 * yLimit) * box.plotHeight,
+    };
+    writeAxisTicks(ctx, box, xMin, xMax, -yLimit, yLimit, 5, 5,
+      (value) => value.toFixed(0), abbreviatedResidual);
+    ctx.strokeStyle = "rgba(220, 231, 239, 0.42)";
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(box.left, coordinate.y(0));
+    ctx.lineTo(box.left + box.plotWidth, coordinate.y(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawUncertaintyBand(ctx, data.mjd, data.residualUs, data.uncertaintyUs, coordinate, "rgba(48, 214, 229, 0.09)");
+    if (data.modelResidualUs) {
+      plotPath(ctx, data.mjd, data.modelResidualUs, coordinate, "#ffb64d", 1.5);
+      if (telemetry.glitchEnabled) {
+        const eventX = coordinate.x(telemetry.glitchMjd);
+        ctx.strokeStyle = "#fa6ba6";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        ctx.moveTo(eventX, box.top);
+        ctx.lineTo(eventX, box.top + box.plotHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#fa6ba6";
+        ctx.font = '10px "Roboto Mono", Consolas, monospace';
+        ctx.fillText("MODEL GLITCH", Math.min(eventX + 5, width - 110), box.top + 13);
+      }
+    }
+    plotPath(ctx, data.mjd, data.residualUs, coordinate, "#30d6e5", 1.25);
+    const markerStride = Math.max(1, Math.ceil(data.mjd.length / 230));
+    ctx.fillStyle = "#30d6e5";
+    for (let index = 0; index < data.mjd.length; index += markerStride) {
+      ctx.beginPath();
+      ctx.arc(coordinate.x(data.mjd[index]), coordinate.y(data.residualUs[index]), 1.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (state.playback) {
+      const cursorX = coordinate.x(state.playback.mjd);
+      const cursorY = coordinate.y(state.playback.residualUs);
+      ctx.strokeStyle = "rgba(76, 224, 162, 0.8)";
+      ctx.beginPath();
+      ctx.moveTo(cursorX, box.top);
+      ctx.lineTo(cursorX, box.top + box.plotHeight);
+      ctx.stroke();
+      ctx.fillStyle = "#4ce0a2";
+      ctx.beginPath();
+      ctx.arc(cursorX, cursorY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawDmx() {
+    const { ctx, width, height } = surfaces.dmx.prepare();
+    if (!state.snapshot) {
+      drawWaiting(ctx, width, height, "AWAITING NANOGRAV DMX PRODUCT");
+      return;
+    }
+    const data = state.snapshot.dmx;
+    const values = new Float64Array(data.value.length);
+    const uncertainty = new Float64Array(data.uncertainty.length);
+    let yMin = Infinity;
+    let yMax = -Infinity;
+    for (let index = 0; index < data.value.length; index += 1) {
+      values[index] = data.value[index] * 1000;
+      uncertainty[index] = data.uncertainty[index] * 1000;
+      yMin = Math.min(yMin, values[index] - uncertainty[index]);
+      yMax = Math.max(yMax, values[index] + uncertainty[index]);
+    }
+    const padding = Math.max(0.02, (yMax - yMin) * 0.1);
+    yMin -= padding;
+    yMax += padding;
+    const xMin = data.mjd[0];
+    const xMax = data.mjd[data.mjd.length - 1];
+    const box = chartBounds(ctx, width, height, 5, 5, "MJD", "DMX x10^-3");
+    const coordinate = {
+      x: (value) => box.left + (value - xMin) / (xMax - xMin || 1) * box.plotWidth,
+      y: (value) => box.top + (yMax - value) / (yMax - yMin || 1) * box.plotHeight,
+    };
+    writeAxisTicks(ctx, box, xMin, xMax, yMin, yMax, 5, 5,
+      (value) => value.toFixed(0), (value) => value.toFixed(2));
+    if (yMin <= 0 && yMax >= 0) {
+      ctx.strokeStyle = "rgba(220, 231, 239, 0.38)";
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      ctx.moveTo(pad.left, y);
-      ctx.lineTo(width - pad.right, y);
+      ctx.moveTo(box.left, coordinate.y(0));
+      ctx.lineTo(box.left + box.plotWidth, coordinate.y(0));
       ctx.stroke();
       ctx.setLineDash([]);
     }
-  }
-
-  ctx.strokeStyle = options.color || "#5bd8ff";
-  ctx.lineWidth = 2.3;
-  ctx.beginPath();
-  points.forEach((point, index) => {
-    if (index === 0) ctx.moveTo(px(point.x), py(point.y));
-    else ctx.lineTo(px(point.x), py(point.y));
-  });
-  ctx.stroke();
-
-  if (options.scatter) {
-    ctx.fillStyle = options.dotColor || "#f4b247";
-    points.forEach((point) => {
+    drawUncertaintyBand(ctx, data.mjd, values, uncertainty, coordinate, "rgba(48, 214, 229, 0.12)");
+    plotPath(ctx, data.mjd, values, coordinate, "#30d6e5", 1.65);
+    ctx.fillStyle = "#30d6e5";
+    const markerStride = Math.max(1, Math.ceil(values.length / 180));
+    for (let index = 0; index < values.length; index += markerStride) {
       ctx.beginPath();
-      ctx.arc(px(point.x), py(point.y), 3, 0, Math.PI * 2);
+      ctx.arc(coordinate.x(data.mjd[index]), coordinate.y(values[index]), 1.8, 0, Math.PI * 2);
       ctx.fill();
-    });
-  }
-}
-
-function drawWaterfall(model) {
-  const { ctx, width, height } = resizeCanvas(canvases.waterfall);
-  const pad = drawFrame(ctx, width, height, "time delay (ms)", "radio frequency");
-  const rows = 44;
-  const cols = 170;
-  const fLow = model.freq - model.bandwidth / 2;
-  const fHigh = model.freq + model.bandwidth / 2;
-  const fRef = fHigh;
-  const delaySpan = Math.max(3, dispersionDelay(model.dm, fLow, fRef) * 1.12);
-  const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
-
-  for (let r = 0; r < rows; r += 1) {
-    const frac = r / (rows - 1);
-    const freq = fHigh - frac * (fHigh - fLow);
-    const delay = dispersionDelay(model.dm, freq, fRef);
-    for (let c = 0; c < cols; c += 1) {
-      const time = c / (cols - 1) * delaySpan;
-      const pulse = Math.exp(-0.5 * ((time - delay) / Math.max(0.18, delaySpan * 0.018)) ** 2);
-      const texture = 0.08 + 0.09 * seededNoise(r * cols + c, 2);
-      const intensity = Math.max(0, Math.min(1, pulse + texture));
-      const color = heatColor(intensity);
-      ctx.fillStyle = color;
-      ctx.fillRect(
-        pad.left + c * plotW / cols,
-        pad.top + r * plotH / rows,
-        plotW / cols + 1,
-        plotH / rows + 1
-      );
     }
   }
 
-  ctx.fillStyle = "#aab4c3";
-  ctx.font = "12px system-ui";
-  ctx.fillText(`${Math.round(fHigh)} MHz`, pad.left + 6, pad.top + 16);
-  ctx.fillText(`${Math.round(fLow)} MHz`, pad.left + 6, height - pad.bottom - 8);
-  ctx.fillText(`0`, pad.left, height - 18);
-  ctx.fillText(`${delaySpan.toFixed(1)} ms`, width - 92, height - 18);
-}
-
-function heatColor(t) {
-  const r = Math.round(18 + 237 * t);
-  const g = Math.round(36 + 154 * Math.max(0, t - 0.15));
-  const b = Math.round(54 + 115 * (1 - t));
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-function dispersionDelay(dm, nuMHz, refMHz) {
-  return 4.148808e3 * dm * (nuMHz ** -2 - refMHz ** -2);
-}
-
-function simulate() {
-  const model = {
-    periodMs: value("period"),
-    widthPct: value("width"),
-    spindownRaw: value("spindown"),
-    durationH: value("duration"),
-    cadenceMin: value("cadence"),
-    noiseMs: value("noise"),
-    dm: value("dm"),
-    freq: value("freq"),
-    bandwidth: value("bandwidth"),
-    glitchEpochPct: value("glitchEpoch"),
-    glitchPpm: value("glitchSize"),
-  };
-
-  model.periodSec = model.periodMs / 1000;
-  model.nu = 1 / model.periodSec;
-  model.pdot = model.spindownRaw * 1e-14;
-  model.nudot = -model.pdot / model.periodSec ** 2;
-  model.durationSec = model.durationH * 3600;
-  model.glitchTime = model.durationSec * model.glitchEpochPct / 100;
-
-  updateLabels(model);
-  const profile = makeProfile(model);
-  const residuals = makeResiduals(model);
-  latestToas = residuals;
-
-  plotLine(canvases.profile, profile, {
-    xLabel: "phase",
-    yLabel: "intensity",
-    xMin: 0,
-    xMax: 1,
-    yMin: -0.05,
-    yMax: 1.2,
-    color: "#5bd8ff",
-  });
-
-  const maxResidual = Math.max(0.2, ...residuals.map((p) => Math.abs(p.y))) * 1.2;
-  plotLine(canvases.residual, residuals, {
-    xLabel: "time (h)",
-    yLabel: "residual (ms)",
-    yMin: -maxResidual,
-    yMax: maxResidual,
-    color: "#f4b247",
-    dotColor: "#ff6f91",
-    scatter: true,
-    thresholds: [
-      { value: 0, color: "rgba(255,255,255,0.35)" },
-    ],
-  });
-
-  drawWaterfall(model);
-}
-
-function makeProfile(model) {
-  const bins = 64;
-  const sigma = model.widthPct / 100;
-  const points = [];
-
-  for (let i = 0; i <= bins; i += 1) {
-    const phase = i / bins;
-    const mainPulse = gaussian(phase, 0.26, sigma);
-    const interpulse = 0.36 * gaussian(phase, 0.72, sigma * 1.5);
-    const baseline = 0.035 * Math.sin(phase * Math.PI * 6);
-    const noise = 0.018 * seededNoise(i, 5);
-    points.push({ x: phase, y: Math.max(0, mainPulse + interpulse + baseline + noise) });
+  function drawProfile() {
+    const { ctx, width, height } = surfaces.profile.prepare();
+    if (!state.snapshot || !state.snapshot.profile) {
+      drawWaiting(ctx, width, height, "ENABLE SIMULATION OVERLAY");
+      return;
+    }
+    const profile = state.snapshot.profile;
+    const box = chartBounds(ctx, width, height, 4, 4, "PHASE", "I");
+    const coordinate = {
+      x: (value) => box.left + value * box.plotWidth,
+      y: (value) => box.top + (1.08 - value) / 1.08 * box.plotHeight,
+    };
+    writeAxisTicks(ctx, box, 0, 1, 0, 1, 4, 4,
+      (value) => value.toFixed(2), (value) => value.toFixed(2));
+    ctx.fillStyle = "rgba(255, 182, 77, 0.12)";
+    ctx.beginPath();
+    ctx.moveTo(coordinate.x(0), coordinate.y(0));
+    for (let index = 0; index < profile.phase.length; index += 1) {
+      ctx.lineTo(coordinate.x(profile.phase[index]), coordinate.y(profile.intensity[index]));
+    }
+    ctx.lineTo(coordinate.x(1), coordinate.y(0));
+    ctx.closePath();
+    ctx.fill();
+    plotPath(ctx, profile.phase, profile.intensity, coordinate, "#ffb64d", 1.7);
   }
 
-  return points;
-}
+  function drawWaiting(ctx, width, height, message) {
+    ctx.fillStyle = "#7f93a9";
+    ctx.font = '12px "Roboto Mono", Consolas, monospace';
+    ctx.textAlign = "center";
+    ctx.fillText(message, width / 2, height / 2);
+    ctx.textAlign = "left";
+  }
 
-function makeResiduals(model) {
-  const count = Math.max(8, Math.floor((model.durationH * 60) / model.cadenceMin) + 1);
-  const residuals = [];
-  const glitchFractional = model.glitchPpm * 1e-6;
+  function render(timestamp) {
+    state.renderTime = timestamp;
+    state.frameCounter += 1;
+    if (timestamp - state.frameWindowStart >= 1000) {
+      const fps = state.frameCounter * 1000 / (timestamp - state.frameWindowStart);
+      readouts.frameRate.textContent = `${fps.toFixed(0)} fps`;
+      state.frameCounter = 0;
+      state.frameWindowStart = timestamp;
+    }
+    drawResiduals();
+    drawDmx();
+    drawProfile();
+    window.requestAnimationFrame(render);
+  }
 
-  for (let i = 0; i < count; i += 1) {
-    const t = i * model.cadenceMin * 60;
-    const postGlitchTime = Math.max(0, t - model.glitchTime);
-    const unmodelledGlitchCycles = model.nu * glitchFractional * postGlitchTime;
-    const glitchResidualMs = -unmodelledGlitchCycles * model.periodMs;
-    const spinCurveMs = -0.5 * (model.nudot / model.nu) * t ** 2 * 1000;
-    const redNoiseMs = model.noiseMs * 0.7 * Math.sin(i * 0.55) + model.noiseMs * seededNoise(i, 11);
-    residuals.push({
-      x: t / 3600,
-      y: glitchResidualMs + spinCurveMs + redNoiseMs,
-      toaSeconds: t + (glitchResidualMs + spinCurveMs + redNoiseMs) / 1000,
+  function resetControls() {
+    for (const [id, defaultValue] of Object.entries(DEFAULTS)) {
+      if (controls[id].type === "checkbox") {
+        controls[id].checked = defaultValue;
+      } else {
+        controls[id].value = String(defaultValue);
+      }
+    }
+    state.seed = 48271;
+    addEvent("Data view and optional model controls restored");
+    configure(true);
+  }
+
+  function updateClock() {
+    readouts.utc.textContent = new Date().toISOString().slice(11, 19);
+  }
+
+  function initialiseWorker() {
+    if (!window.Worker) {
+      setEngineState("FAILED", "error", "WEB WORKERS ARE NOT SUPPORTED BY THIS BROWSER");
+      return;
+    }
+    try {
+      state.worker = new Worker("assets/js/physicsWorker.js");
+    } catch (error) {
+      setEngineState("FAILED", "error", "SERVE THIS DIRECTORY OVER HTTP TO ENABLE THE WORKER");
+      addEvent(`Worker creation failed: ${error.message}`);
+      return;
+    }
+    state.worker.addEventListener("message", handleWorkerMessage);
+    state.worker.addEventListener("error", (error) => {
+      setEngineState("FAILED", "error", "WORKER ERROR / CHECK CONSOLE");
+      addEvent(`Worker error: ${error.message || "unknown failure"}`);
     });
+    state.worker.postMessage({ type: "setPlayback", playing: true });
+    configure(true);
   }
 
-  return residuals;
-}
+  for (const control of Object.values(controls)) {
+    control.addEventListener("input", () => configure(false));
+    control.addEventListener("change", () => configure(true));
+  }
 
-function updateLabels(model) {
-  outputs.period.textContent = `${model.periodMs.toFixed(1)} ms`;
-  outputs.width.textContent = `${model.widthPct.toFixed(1)}%`;
-  outputs.spindown.textContent = `${(model.spindownRaw / 10).toFixed(1)}e-13 s/s`;
-  outputs.duration.textContent = `${model.durationH.toFixed(1)} h`;
-  outputs.cadence.textContent = `${model.cadenceMin.toFixed(1)} min`;
-  outputs.noise.textContent = `${model.noiseMs.toFixed(3)} ms`;
-  outputs.dm.textContent = `${model.dm.toFixed(0)} pc cm^-3`;
-  outputs.freq.textContent = `${model.freq.toFixed(0)} MHz`;
-  outputs.bandwidth.textContent = `${model.bandwidth.toFixed(0)} MHz`;
-  outputs.glitchEpoch.textContent = `${model.glitchEpochPct.toFixed(0)}%`;
-  outputs.glitchSize.textContent = `${model.glitchPpm.toFixed(1)} ppm`;
-
-  const fLow = model.freq - model.bandwidth / 2;
-  const fHigh = model.freq + model.bandwidth / 2;
-  const dmDelay = Math.max(0, dispersionDelay(model.dm, fLow, fHigh));
-  const residuals = makeResiduals(model);
-  const rms = Math.sqrt(residuals.reduce((sum, point) => sum + point.y ** 2, 0) / residuals.length);
-
-  outputs.summaryPeriod.textContent = `${model.periodMs.toFixed(1)} ms`;
-  outputs.summaryDm.textContent = `${dmDelay.toFixed(2)} ms`;
-  outputs.summaryRms.textContent = `${rms.toFixed(3)} ms`;
-  outputs.summaryGlitch.textContent = `${model.glitchPpm.toFixed(3)} ppm`;
-}
-
-function exportToas() {
-  const rows = ["time_hours,toa_seconds,residual_ms"];
-  latestToas.forEach((point) => {
-    rows.push(`${point.x.toFixed(6)},${point.toaSeconds.toFixed(9)},${point.y.toFixed(6)}`);
+  buttons.play.addEventListener("click", () => {
+    state.playing = !state.playing;
+    buttons.play.textContent = state.playing ? "PAUSE STREAM" : "RESUME STREAM";
+    buttons.play.classList.toggle("paused", !state.playing);
+    buttons.play.setAttribute("aria-pressed", String(state.playing));
+    if (state.worker) {
+      state.worker.postMessage({ type: "setPlayback", playing: state.playing });
+    }
+    addEvent(state.playing ? "Released-product cursor resumed" : "Released-product cursor paused");
   });
-  const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "synthetic_pulsar_toas.csv";
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
-function resetControls() {
-  const defaults = {
-    period: 33,
-    width: 4.5,
-    spindown: 42,
-    duration: 3,
-    cadence: 6,
-    noise: 0.06,
-    dm: 56,
-    freq: 1400,
-    bandwidth: 300,
-    glitchEpoch: 55,
-    glitchSize: 3,
-  };
-  Object.entries(defaults).forEach(([key, defaultValue]) => {
-    controls[key].value = String(defaultValue);
+  buttons.reseed.addEventListener("click", () => {
+    state.seed = (state.seed * 1664525 + 1013904223) >>> 0;
+    addEvent(controls.modelOverlay.checked
+      ? `Optional stochastic injection reseeded / ${state.seed}`
+      : "Model seed updated; enable simulation overlay to display it");
+    configure(true);
   });
-  simulate();
-}
 
-Object.values(controls).forEach((control) => control.addEventListener("input", simulate));
-document.querySelector("#reset-button").addEventListener("click", resetControls);
-document.querySelector("#export-button").addEventListener("click", exportToas);
-window.addEventListener("resize", simulate);
+  buttons.export.addEventListener("click", () => {
+    if (state.worker && state.snapshot) {
+      state.worker.postMessage({ type: "exportCsv" });
+    }
+  });
 
-simulate();
+  buttons.reset.addEventListener("click", resetControls);
+  window.addEventListener("resize", () => {
+    drawResiduals();
+    drawDmx();
+    drawProfile();
+  });
+
+  formatInputLabels();
+  updateClock();
+  window.setInterval(updateClock, 1000);
+  initialiseWorker();
+  window.requestAnimationFrame(render);
+})();
