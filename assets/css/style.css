@@ -1,21 +1,21 @@
 :root {
   color-scheme: dark;
-  --background: #0b0f19;
-  --surface: #101623;
-  --surface-raised: #131c2b;
-  --surface-recessed: #080c15;
-  --border: #253348;
-  --border-bright: #344a64;
+  --background: #14171d;
+  --surface: #1b1f27;
+  --surface-raised: #232834;
+  --surface-recessed: #171a21;
+  --border: #2c313d;
+  --border-bright: #3a4150;
   --grid: rgba(85, 113, 142, 0.2);
-  --text: #dce7ef;
-  --text-bright: #f3f8fc;
-  --muted: #7f93a9;
-  --cyan: #30d6e5;
-  --cyan-soft: rgba(48, 214, 229, 0.18);
-  --amber: #ffb64d;
-  --magenta: #fa6ba6;
-  --green: #4ce0a2;
-  --danger: #ff6178;
+  --text: #eef1f6;
+  --text-bright: #ffffff;
+  --muted: #8b93a3;
+  --cyan: #d1a256;
+  --cyan-soft: rgba(209, 162, 86, 0.16);
+  --amber: #f2b866;
+  --magenta: #e8778a;
+  --green: #6fcf97;
+  --danger: #e8778a;
   --font-mono: "Roboto Mono", "Fira Code", "Cascadia Mono", "IBM Plex Mono", Consolas, monospace;
   --font-ui: Inter, "Segoe UI", Arial, sans-serif;
 }
@@ -47,7 +47,7 @@ select {
 
 button {
   border: 1px solid var(--border-bright);
-  border-radius: 2px;
+  border-radius: 8px;
   background: var(--surface-raised);
   color: var(--text);
   cursor: pointer;
@@ -68,14 +68,14 @@ button:focus-visible {
 }
 
 button.primary {
-  border-color: rgba(48, 214, 229, 0.7);
+  border-color: rgba(209, 162, 86, 0.7);
   background: var(--cyan-soft);
   color: var(--cyan);
 }
 
 button.primary.paused {
-  border-color: rgba(255, 182, 77, 0.7);
-  background: rgba(255, 182, 77, 0.12);
+  border-color: rgba(242, 184, 102, 0.7);
+  background: rgba(242, 184, 102, 0.12);
   color: var(--amber);
 }
 
@@ -84,14 +84,12 @@ button.primary.paused {
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(48, 214, 229, 0.025) 1px, transparent 1px) 0 0 / 68px 68px,
-    linear-gradient(rgba(48, 214, 229, 0.018) 1px, transparent 1px) 0 0 / 68px 68px,
     var(--background);
 }
 
 .command-bar {
   align-items: stretch;
-  background: rgba(8, 12, 21, 0.96);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: grid;
   gap: 1rem;
@@ -135,7 +133,7 @@ h1 {
 
 .header-telemetry {
   display: grid;
-  gap: 1px;
+  gap: 0.5rem;
   grid-template-columns: repeat(4, minmax(7.8rem, 1fr));
   margin: 0;
 }
@@ -143,6 +141,7 @@ h1 {
 .header-telemetry div {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: 8px;
   min-width: 0;
   padding: 0.58rem 0.65rem;
 }
@@ -201,21 +200,23 @@ h1 {
 
 .console-grid {
   display: grid;
-  gap: 1px;
+  gap: 0.75rem;
   grid-template-columns: 19.5rem minmax(38rem, 1fr) 22rem;
   min-height: 0;
-  padding: 1px 0;
+  padding: 0.75rem;
 }
 
 .panel {
-  background: rgba(16, 22, 35, 0.94);
+  background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: 10px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .panel-title {
   align-items: center;
-  background: rgba(19, 28, 43, 0.75);
+  background: var(--surface-raised);
   border-bottom: 1px solid var(--border);
   display: flex;
   gap: 0.75rem;
@@ -295,7 +296,7 @@ output {
 input[type="range"] {
   appearance: none;
   background: var(--border);
-  border-radius: 0;
+  border-radius: 6px;
   height: 2px;
   margin: 0.34rem 0 0.26rem;
   outline: 0;
@@ -313,7 +314,7 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-moz-range-thumb {
   background: var(--cyan);
   border: 0;
-  border-radius: 0;
+  border-radius: 6px;
   height: 0.82rem;
   width: 0.42rem;
 }
@@ -325,7 +326,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb {
 input[type="number"] {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: 6px;
   color: var(--text-bright);
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -344,7 +345,7 @@ select {
   appearance: none;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0;
+  border-radius: 6px;
   color: var(--text-bright);
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -392,15 +393,16 @@ input[type="checkbox"] {
 }
 
 .metric-strip {
-  background: var(--surface-recessed);
+  background: transparent;
   display: grid;
-  gap: 1px;
+  gap: 0.5rem;
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .metric-strip article {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 0.72rem 0.82rem 0.64rem;
 }
 
@@ -536,7 +538,7 @@ input[type="checkbox"] {
 }
 
 .event-card li {
-  border-bottom: 1px solid rgba(37, 51, 72, 0.52);
+  border-bottom: 1px solid rgba(44, 49, 61, 0.7);
   margin: 0;
   padding: 0.36rem 0;
 }
@@ -659,269 +661,5 @@ input[type="checkbox"] {
 
   .legend {
     display: none;
-  }
-}
-
-:root {
-  --accent-glow: rgba(48, 214, 229, 0.32);
-  --console-black: #050811;
-  --panel-shadow: rgba(0, 0, 0, 0.38);
-}
-
-body {
-  background: var(--console-black);
-  font-family: var(--font-mono);
-  letter-spacing: 0.008em;
-}
-
-body::before {
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(150, 214, 231, 0.026) 0,
-    rgba(150, 214, 231, 0.026) 1px,
-    transparent 1px,
-    transparent 4px
-  );
-  content: "";
-  inset: 0;
-  mix-blend-mode: screen;
-  opacity: 0.42;
-  pointer-events: none;
-  position: fixed;
-  z-index: 90;
-}
-
-.instrument {
-  background:
-    radial-gradient(circle at 58% 13%, rgba(48, 214, 229, 0.1), transparent 29rem),
-    radial-gradient(circle at 100% 100%, rgba(250, 107, 166, 0.055), transparent 27rem),
-    linear-gradient(90deg, rgba(48, 214, 229, 0.035) 1px, transparent 1px) 0 0 / 54px 54px,
-    linear-gradient(rgba(48, 214, 229, 0.027) 1px, transparent 1px) 0 0 / 54px 54px,
-    var(--console-black);
-  isolation: isolate;
-  position: relative;
-}
-
-.instrument::after {
-  background:
-    linear-gradient(90deg, var(--cyan), transparent 22%) left top / 18rem 1px no-repeat,
-    linear-gradient(270deg, var(--cyan), transparent 22%) right top / 18rem 1px no-repeat;
-  content: "";
-  inset: 0;
-  opacity: 0.55;
-  pointer-events: none;
-  position: absolute;
-  z-index: 5;
-}
-
-.command-bar {
-  background:
-    linear-gradient(90deg, rgba(48, 214, 229, 0.06), transparent 29%),
-    rgba(5, 8, 17, 0.98);
-  box-shadow: inset 0 -1px 0 rgba(48, 214, 229, 0.1), 0 10px 30px rgba(0, 0, 0, 0.32);
-  padding-top: 1.65rem;
-  position: relative;
-}
-
-.command-bar::before {
-  color: var(--muted);
-  content: "PTL // NANOGRAV 11Y // RESIDUAL + DMX RELEASE PRODUCTS // TELEMETRY BUS: SYNCHRONISED";
-  font-size: 0.56rem;
-  left: 1rem;
-  letter-spacing: 0.21em;
-  position: absolute;
-  right: 1rem;
-  top: 0.5rem;
-}
-
-.brand {
-  border-left: 2px solid var(--cyan);
-  padding-left: 0.9rem;
-}
-
-h1 {
-  text-shadow: 0 0 22px rgba(48, 214, 229, 0.12);
-}
-
-.header-telemetry div {
-  background: linear-gradient(145deg, rgba(19, 28, 43, 0.9), rgba(7, 11, 20, 0.92));
-  box-shadow: inset 0 1px 0 rgba(167, 214, 228, 0.04);
-  position: relative;
-}
-
-.header-telemetry div::after {
-  background: var(--cyan);
-  bottom: 0;
-  content: "";
-  height: 1px;
-  left: 0.65rem;
-  opacity: 0.55;
-  position: absolute;
-  width: 1.15rem;
-}
-
-button {
-  background: linear-gradient(180deg, rgba(27, 39, 58, 0.98), rgba(10, 15, 25, 0.98));
-  box-shadow: inset 0 1px 0 rgba(207, 232, 239, 0.07);
-}
-
-button:hover,
-button:focus-visible {
-  box-shadow: inset 0 1px 0 rgba(207, 232, 239, 0.08), 0 0 18px rgba(48, 214, 229, 0.12);
-}
-
-.panel {
-  background:
-    linear-gradient(150deg, rgba(18, 27, 42, 0.98), rgba(8, 12, 22, 0.98)),
-    var(--surface);
-  box-shadow: inset 0 1px 0 rgba(169, 205, 219, 0.035), 0 10px 25px var(--panel-shadow);
-  overflow: hidden;
-  position: relative;
-}
-
-.panel::before {
-  background: linear-gradient(90deg, var(--cyan), transparent 4.2rem);
-  content: "";
-  height: 1px;
-  left: 0;
-  opacity: 0.7;
-  position: absolute;
-  top: 0;
-  width: 7rem;
-  z-index: 1;
-}
-
-.panel-title {
-  background:
-    linear-gradient(90deg, rgba(48, 214, 229, 0.075), transparent 43%),
-    rgba(13, 20, 33, 0.9);
-}
-
-.controls {
-  background:
-    linear-gradient(rgba(48, 214, 229, 0.026) 1px, transparent 1px) 0 0 / 100% 2.65rem,
-    #060a13;
-  scrollbar-color: var(--border-bright) var(--console-black);
-  scrollbar-width: thin;
-}
-
-fieldset {
-  background: linear-gradient(100deg, rgba(48, 214, 229, 0.025), transparent 48%);
-}
-
-legend {
-  background: rgba(48, 214, 229, 0.095);
-  border-left: 2px solid var(--cyan);
-  padding: 0.18rem 0.4rem;
-}
-
-.dataset {
-  background:
-    linear-gradient(105deg, rgba(48, 214, 229, 0.09), transparent 70%),
-    rgba(10, 17, 29, 0.92);
-}
-
-.dataset-note {
-  border-top: 1px solid rgba(48, 214, 229, 0.18);
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.61rem;
-  letter-spacing: 0.04em;
-  line-height: 1.55;
-  margin: 0.8rem 0 0;
-  padding-top: 0.65rem;
-}
-
-.model-toggle output {
-  color: var(--cyan);
-  margin-left: 0.35rem;
-}
-
-.model-parameters {
-  border-top: 1px solid rgba(255, 182, 77, 0.25);
-  transition: filter 140ms ease, opacity 140ms ease;
-}
-
-.model-parameters.inactive {
-  filter: saturate(0.45);
-  opacity: 0.48;
-}
-
-.model-parameters legend {
-  border-left-color: var(--amber);
-  color: var(--amber);
-}
-
-input[type="range"] {
-  background: linear-gradient(90deg, rgba(48, 214, 229, 0.5), var(--border) 34%);
-}
-
-.metric-strip {
-  counter-reset: instrument-metric;
-}
-
-.metric-strip article {
-  background:
-    linear-gradient(135deg, rgba(48, 214, 229, 0.07), transparent 46%),
-    linear-gradient(180deg, rgba(17, 25, 39, 0.98), rgba(8, 12, 21, 0.98));
-  min-height: 5.1rem;
-  overflow: hidden;
-  padding-left: 0.94rem;
-  position: relative;
-}
-
-.metric-strip article::before {
-  color: rgba(127, 147, 169, 0.12);
-  content: "0" counter(instrument-metric);
-  counter-increment: instrument-metric;
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: -0.08em;
-  position: absolute;
-  right: 0.5rem;
-  top: 0.25rem;
-}
-
-.metric-strip article::after {
-  background: linear-gradient(90deg, var(--cyan), transparent);
-  bottom: 0;
-  content: "";
-  height: 2px;
-  left: 0;
-  position: absolute;
-  width: 52%;
-}
-
-.metric-strip strong {
-  position: relative;
-  text-shadow: 0 0 12px rgba(48, 214, 229, 0.22);
-  z-index: 1;
-}
-
-.chart canvas {
-  background: radial-gradient(circle at center, rgba(48, 214, 229, 0.028), transparent 70%);
-  filter: contrast(1.04) saturate(1.08);
-}
-
-.plot-footer {
-  background: rgba(6, 10, 18, 0.72);
-}
-
-.event-card li::before {
-  content: "[RX] ";
-}
-
-.status-bar {
-  background: linear-gradient(90deg, rgba(48, 214, 229, 0.075), transparent 24%), var(--console-black);
-  box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.25);
-}
-
-#status-message {
-  text-shadow: 0 0 12px var(--accent-glow);
-}
-
-@media (max-width: 940px) {
-  .command-bar {
-    padding-top: 2rem;
   }
 }

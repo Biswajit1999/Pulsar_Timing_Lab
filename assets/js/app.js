@@ -88,7 +88,7 @@
         this.canvas.height = Math.round(height * ratio);
       }
       this.context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      this.context.fillStyle = "#080c15";
+      this.context.fillStyle = "#171a21";
       this.context.fillRect(0, 0, width, height);
       return { ctx: this.context, width, height };
     }
@@ -319,7 +319,7 @@
       ctx.lineTo(margins.left + plotWidth, y + 0.5);
       ctx.stroke();
     }
-    ctx.fillStyle = "#7f93a9";
+    ctx.fillStyle = "#8b93a3";
     ctx.font = '11px "Roboto Mono", "Cascadia Mono", Consolas, monospace';
     ctx.fillText(yLabel, 10, margins.top + 8);
     ctx.textAlign = "right";
@@ -329,7 +329,7 @@
   }
 
   function writeAxisTicks(ctx, box, xMin, xMax, yMin, yMax, xTicks, yTicks, formatX, formatY) {
-    ctx.fillStyle = "#7f93a9";
+    ctx.fillStyle = "#8b93a3";
     ctx.font = '10px "Roboto Mono", "Cascadia Mono", Consolas, monospace';
     for (let index = 0; index <= xTicks; index += 1) {
       const ratio = index / xTicks;
@@ -418,10 +418,10 @@
 
     drawUncertaintyBand(ctx, data.mjd, data.residualUs, data.uncertaintyUs, coordinate, "rgba(48, 214, 229, 0.09)");
     if (data.modelResidualUs) {
-      plotPath(ctx, data.mjd, data.modelResidualUs, coordinate, "#ffb64d", 1.5);
+      plotPath(ctx, data.mjd, data.modelResidualUs, coordinate, "#f2b866", 1.5);
       if (telemetry.glitchEnabled) {
         const eventX = coordinate.x(telemetry.glitchMjd);
-        ctx.strokeStyle = "#fa6ba6";
+        ctx.strokeStyle = "#e8778a";
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 4]);
         ctx.beginPath();
@@ -429,14 +429,14 @@
         ctx.lineTo(eventX, box.top + box.plotHeight);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = "#fa6ba6";
+        ctx.fillStyle = "#e8778a";
         ctx.font = '10px "Roboto Mono", Consolas, monospace';
         ctx.fillText("MODEL GLITCH", Math.min(eventX + 5, width - 110), box.top + 13);
       }
     }
-    plotPath(ctx, data.mjd, data.residualUs, coordinate, "#30d6e5", 1.25);
+    plotPath(ctx, data.mjd, data.residualUs, coordinate, "#d1a256", 1.25);
     const markerStride = Math.max(1, Math.ceil(data.mjd.length / 230));
-    ctx.fillStyle = "#30d6e5";
+    ctx.fillStyle = "#d1a256";
     for (let index = 0; index < data.mjd.length; index += markerStride) {
       ctx.beginPath();
       ctx.arc(coordinate.x(data.mjd[index]), coordinate.y(data.residualUs[index]), 1.55, 0, Math.PI * 2);
@@ -450,7 +450,7 @@
       ctx.moveTo(cursorX, box.top);
       ctx.lineTo(cursorX, box.top + box.plotHeight);
       ctx.stroke();
-      ctx.fillStyle = "#4ce0a2";
+      ctx.fillStyle = "#6fcf97";
       ctx.beginPath();
       ctx.arc(cursorX, cursorY, 4, 0, Math.PI * 2);
       ctx.fill();
@@ -496,8 +496,8 @@
       ctx.setLineDash([]);
     }
     drawUncertaintyBand(ctx, data.mjd, values, uncertainty, coordinate, "rgba(48, 214, 229, 0.12)");
-    plotPath(ctx, data.mjd, values, coordinate, "#30d6e5", 1.65);
-    ctx.fillStyle = "#30d6e5";
+    plotPath(ctx, data.mjd, values, coordinate, "#d1a256", 1.65);
+    ctx.fillStyle = "#d1a256";
     const markerStride = Math.max(1, Math.ceil(values.length / 180));
     for (let index = 0; index < values.length; index += markerStride) {
       ctx.beginPath();
@@ -529,11 +529,11 @@
     ctx.lineTo(coordinate.x(1), coordinate.y(0));
     ctx.closePath();
     ctx.fill();
-    plotPath(ctx, profile.phase, profile.intensity, coordinate, "#ffb64d", 1.7);
+    plotPath(ctx, profile.phase, profile.intensity, coordinate, "#f2b866", 1.7);
   }
 
   function drawWaiting(ctx, width, height, message) {
-    ctx.fillStyle = "#7f93a9";
+    ctx.fillStyle = "#8b93a3";
     ctx.font = '12px "Roboto Mono", Consolas, monospace';
     ctx.textAlign = "center";
     ctx.fillText(message, width / 2, height / 2);
