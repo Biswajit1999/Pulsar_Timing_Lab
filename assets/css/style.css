@@ -572,6 +572,10 @@ input[type="checkbox"] {
   color: var(--cyan);
 }
 
+.site-links { display: flex; gap: .8rem; }
+.site-links a { color: var(--muted); text-decoration: none; }
+.site-links a:hover { color: var(--cyan); }
+
 @media (max-width: 1320px) {
   .command-bar {
     grid-template-columns: 1fr 1.2fr;
