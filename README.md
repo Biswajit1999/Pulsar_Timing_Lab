@@ -322,6 +322,24 @@ std(a_k), std(b_k)  proportional to  k^(-gamma / 2)
 The finite-sample mean is removed and the series is linearly rescaled so its RMS equals the
 requested value before independent zero-mean Gaussian white noise is added.
 
+## What Timing Precision Actually Buys: Value to a Gravitational-Wave Search
+
+The `PTA value` readout classifies the current pulsar's real observed RMS timing residual by
+what it would actually be worth to a pulsar timing array (PTA) searching for the nanohertz
+stochastic gravitational-wave background -- the same kind of search that produced NANOGrav's
+2023 evidence for a background signal via Hellings-Downs cross-correlation across an array of
+pulsars (Agazie et al., 2023, *ApJL*, 951, L8), where the best-timed millisecond pulsars carry
+by far the most statistical weight.
+
+- **`< 0.5 us` RMS** -- excellent PTA-grade precision, among NANOGrav's best timers.
+- **`0.5-3 us`** -- good PTA-grade precision, a solid array contributor.
+- **`> 3 us`** -- modest precision, contributing comparatively little statistical weight.
+
+The default pulsar, **J1713+0747**, is a genuine top-tier NANOGrav timer -- its real observed
+RMS residual here (`~0.3 us`) correctly lands in the "excellent" category, exactly the kind of
+pulsar that anchors a real gravitational-wave-background search. Switch to the other bundled
+pulsars to see how timing precision actually varies across NANOGrav's real array.
+
 ## References
 
 Arzoumanian, Z. et al. (2018) 'The NANOGrav 11-year data set: High-precision timing of 45

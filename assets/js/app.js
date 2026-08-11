@@ -55,6 +55,7 @@
     residualCursor: document.getElementById("residual-cursor"),
     residualExtrema: document.getElementById("residual-extrema"),
     dmx: document.getElementById("waterfall-readout"),
+    ptaValue: document.getElementById("pta-value-note"),
     status: document.getElementById("status-message"),
     events: document.getElementById("event-log"),
   };
@@ -206,6 +207,9 @@
       `${(telemetry.dmxMinimum * 1000).toFixed(3)} to ${(telemetry.dmxMaximum * 1000).toFixed(3)}`;
     readouts.frequencyBand.textContent = `x10^-3 PC CM^-3 / ${telemetry.dmxCount} DMX BINS`;
     readouts.rms.textContent = formatResidual(telemetry.observedRmsUs);
+    if (readouts.ptaValue && telemetry.ptaValueClassification) {
+      readouts.ptaValue.textContent = `PTA value: ${telemetry.ptaValueClassification}`;
+    }
     const spanYears = (telemetry.lastMjd - telemetry.firstMjd) / 365.25;
     readouts.toaCount.textContent = `${telemetry.residualCount} SAMPLES / ${spanYears.toFixed(2)} YR`;
     if (telemetry.modelOverlay) {

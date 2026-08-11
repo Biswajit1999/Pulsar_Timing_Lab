@@ -288,6 +288,13 @@ function wrappedGaussian(value, centre, sigma) {
   return Math.exp(-0.5 * (wrapped / sigma) ** 2);
 }
 
+// Classifies this pulsar's real timing RMS precision by its value to a pulsar timing array
+// (PTA) hunting for the nanohertz stochastic gravitational-wave background. NANOGrav's 2023
+// announcement of evidence for a background used a Hellings-Downs cross-correlation across an
+// array of pulsars, weighted heavily toward the best-timed ones -- sub-microsecond precision
+// millisecond pulsars like J1713+0747 (one of this lab's own targets) are the highest-value
+// array members (Agazie et al., 2023, ApJL, 951, L8, the NANOGrav 15-year data set paper).
+function ptaValueClassification(rmsUs){if(rmsUs<0.5)return"excellent PTA-grade precision -- among the best NANOGrav timers, high-weight in a Hellings-Downs GWB search";if(rmsUs<3)return"good PTA-grade precision -- a solid contributor to the timing array";return"modest precision for PTA work -- contributes less statistical weight to a gravitational-wave-background search"}
 function calculateTelemetry(parameters, observed, dmx, model, startTime) {
   let residualSumSquares = 0;
   let minimumResidualUs = Infinity;
@@ -322,6 +329,7 @@ function calculateTelemetry(parameters, observed, dmx, model, startTime) {
     firstMjd: observed.mjd[0],
     lastMjd: observed.mjd[observed.mjd.length - 1],
     observedRmsUs: Math.sqrt(residualSumSquares / observed.residualUs.length),
+    ptaValueClassification: ptaValueClassification(Math.sqrt(residualSumSquares / observed.residualUs.length)),
     minimumResidualUs,
     maximumResidualUs,
     dmxMinimum,
