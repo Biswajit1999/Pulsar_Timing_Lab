@@ -1,0 +1,22 @@
+name: NANOGrav descriptive diagnostics
+on:
+  push:
+    paths:
+      - 'tools/observational_diagnostics.py'
+      - 'tools/test_observational_diagnostics.py'
+      - 'data/observations/nanograv_11yr_residuals.json'
+      - '.github/workflows/observational-diagnostics.yml'
+  pull_request:
+  workflow_dispatch:
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/validate_observations.py
+      - run: python -m unittest discover -s tools -p 'test_observational_diagnostics.py' -v
+      - run: python tools/observational_diagnostics.py --output /tmp/nanograv_11yr_diagnostics.json
+      - run: python -c 'import json; p=json.load(open("/tmp/nanograv_11yr_diagnostics.json")); assert len(p["pulsars"]) == 3'
