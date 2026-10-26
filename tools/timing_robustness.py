@@ -1,11 +1,13 @@
-"""Independent, descriptive diagnostics for published pulsar residual/DMX series.
+"""Correlated-noise and chromatic sensitivity diagnostics for NANOGrav DMX bins.
 
-No timing-model parameters are re-fitted. Results must not be used as PTA
-GW significance or as independent physical DM trends without a noise model.
+These are conditional sensitivity experiments on published timing-model-dependent
+products, not independent timing solutions or physical DM detections.
 """
 from __future__ import annotations
 
 import numpy as np
+
+DISPERSION_CONSTANT_S_MHZ2 = 4.148808e3
 
 
 def _series(t, y, sigma):
@@ -13,84 +15,75 @@ def _series(t, y, sigma):
     if any(v.ndim != 1 for v in (t, y, sigma)) or not (len(t) == len(y) == len(sigma)):
         raise ValueError("t, y, sigma must be equally sized 1-D arrays")
     if len(t) < 3 or not all(np.isfinite(v).all() for v in (t, y, sigma)) or np.any(sigma <= 0):
-        raise ValueError("at least three finite measurements with positive uncertainties required")
+        raise ValueError("at least three finite observations with positive errors required")
     return t, y, sigma
 
 
-def weighted_trend(t, y, sigma):
-    """Diagonal-error weighted intercept/slope, with fixed-error covariance.
+def gls_trend(t, y, sigma, *, correlated_rms=0.0, correlation_timescale=1.0):
+    """GLS line fit with C_ij=sigma_i² delta_ij+a² exp(-|ti-tj|/tau).
 
-    Time and slope share the input time unit. The returned intercept is at
-    the weighted mean epoch, reducing covariance and cancellation.
+    Amplitude a and timescale tau are declared sensitivity assumptions, not
+    fitted noise parameters. Times and tau must use the same unit.
     """
     t, y, sigma = _series(t, y, sigma)
-    w = (sigma / np.min(sigma)) ** -2
-    epoch = np.sum(w * t) / np.sum(w)
-    dt = t - epoch
-    sxx = np.sum(w * dt * dt)
-    if not np.isfinite(sxx) or sxx <= 1e-20 * np.sum(w):
-        raise ValueError("epochs have insufficient leverage")
-    intercept = np.sum(w * y) / np.sum(w)
-    slope = np.sum(w * dt * (y - intercept)) / sxx
-    residual = y - intercept - slope * dt
-    chi2 = np.sum((residual / sigma) ** 2)
-    cov = np.diag([1 / np.sum(1 / sigma**2), 1 / np.sum((dt / sigma)**2)])
-    return {"epoch": float(epoch), "intercept": float(intercept), "slope": float(slope),
-            "intercept_sigma": float(np.sqrt(cov[0, 0])), "slope_sigma": float(np.sqrt(cov[1, 1])),
-            "chi2": float(chi2), "dof": len(t)-2, "reduced_chi2": float(chi2/(len(t)-2))}
+    if not np.isfinite(correlated_rms) or correlated_rms < 0 or not np.isfinite(correlation_timescale) or correlation_timescale <= 0:
+        raise ValueError("invalid correlated-noise hyperparameters")
+    epoch = float(np.mean(t))
+    x = np.column_stack((np.ones(len(t)), t - epoch))
+    covariance = np.diag(sigma**2)
+    if correlated_rms > 0:
+        covariance += correlated_rms**2 * np.exp(-np.abs(t[:, None]-t[None, :])/correlation_timescale)
+    chol = np.linalg.cholesky(covariance)
+    whitened_x = np.linalg.solve(chol, x)
+    whitened_y = np.linalg.solve(chol, y)
+    fisher = whitened_x.T @ whitened_x
+    cov_beta = np.linalg.inv(fisher)
+    beta = cov_beta @ (whitened_x.T @ whitened_y)
+    chi2 = float(np.sum((whitened_y-whitened_x @ beta)**2))
+    return {"epoch": epoch, "intercept": float(beta[0]), "slope": float(beta[1]),
+            "slope_sigma_conditional": float(np.sqrt(cov_beta[1, 1])),
+            "intercept_sigma_conditional": float(np.sqrt(cov_beta[0, 0])),
+            "chi2": chi2, "dof": len(t)-2, "reduced_chi2": chi2/(len(t)-2),
+            "assumed_correlated_rms": float(correlated_rms),
+            "assumed_timescale": float(correlation_timescale)}
 
 
-def diagonal_excess_scatter(y, sigma, *, tol=1e-10):
-    """Non-negative extra *independent* RMS solving chi2(jitter)=n-1.
+def leave_block_out_trends(t, y, sigma, *, block_width=1.0, correlated_rms=0.0, correlation_timescale=1.0):
+    """Re-fit GLS after excluding each nonempty time block in turn.
 
-    Returns zero if formal errors already produce reduced chi2 <= 1.
-    This is a descriptive error-floor diagnostic, not a red-noise model.
-    """
-    _, y, sigma = _series(np.arange(len(y)), y, sigma)
-    def evaluate(jitter):
-        w = 1.0 / (sigma*sigma + jitter*jitter)
-        mean = np.sum(w*y)/np.sum(w)
-        return float(np.sum(w*(y-mean)**2)/(len(y)-1)), float(mean)
-    initial, mean = evaluate(0.0)
-    if initial <= 1:
-        return {"extra_rms": 0.0, "mean": mean, "initial_reduced_chi2": initial, "final_reduced_chi2": initial}
-    hi = max(float(np.std(y)), float(np.max(sigma)), 1e-12)
-    while evaluate(hi)[0] > 1:
-        hi *= 2
-        if not np.isfinite(hi):
-            raise ArithmeticError("unable to bracket extra scatter")
-    lo = 0.0
-    for _ in range(100):
-        mid = (lo + hi)/2
-        if evaluate(mid)[0] > 1:
-            lo = mid
-        else:
-            hi = mid
-        if hi-lo <= tol*max(1.0, hi):
-            break
-    final, mean = evaluate(hi)
-    return {"extra_rms": float(hi), "mean": mean,
-            "initial_reduced_chi2": initial, "final_reduced_chi2": final}
-
-
-def pair_structure_function(t, y, sigma, lag_edges, *, max_pairs=2_000_000):
-    """Noise-subtracted pairwise squared differences in time-lag bins.
-
-    Pairs use i<j; subtraction of sigma_i²+sigma_j² assumes independent
-    quoted errors. Negative values are retained (never clipped to zero).
+    This is a deletion-sensitivity envelope, not a bootstrap confidence band.
     """
     t, y, sigma = _series(t, y, sigma)
-    edges = np.asarray(lag_edges, dtype=float)
-    if edges.ndim != 1 or len(edges) < 2 or not np.all(np.isfinite(edges)) or edges[0] < 0 or np.any(np.diff(edges) <= 0):
-        raise ValueError("lag edges must be increasing, finite and non-negative")
-    if len(t)*(len(t)-1)//2 > max_pairs:
-        raise ValueError("too many pairs; increase max_pairs explicitly")
-    ii, jj = np.triu_indices(len(t), 1)
-    lag = np.abs(t[jj]-t[ii])
-    signal = (y[jj]-y[ii])**2 - sigma[ii]**2 - sigma[jj]**2
-    which = np.searchsorted(edges, lag, side="right")-1
-    which[lag == edges[-1]] = len(edges)-2
-    return [{"lag_min": float(edges[k]), "lag_max": float(edges[k+1]),
-             "pairs": int(np.sum(which == k)),
-             "noise_subtracted_mean_square": (float(np.mean(signal[which == k])) if np.any(which == k) else None)}
-            for k in range(len(edges)-1)]
+    if not np.isfinite(block_width) or block_width <= 0:
+        raise ValueError("block_width must be positive")
+    blocks = np.floor((t-np.min(t))/block_width).astype(int)
+    unique = np.unique(blocks)
+    if len(unique) < 2:
+        raise ValueError("at least two time blocks required")
+    full = gls_trend(t, y, sigma, correlated_rms=correlated_rms, correlation_timescale=correlation_timescale)
+    results = []
+    for block in unique:
+        keep = blocks != block
+        if np.sum(keep) < 3 or np.ptp(t[keep]) < 1e-10:
+            continue
+        fit = gls_trend(t[keep], y[keep], sigma[keep], correlated_rms=correlated_rms,
+                        correlation_timescale=correlation_timescale)
+        results.append({"block_index": int(block), "removed": int(np.sum(~keep)), "slope": fit["slope"]})
+    if not results:
+        raise ValueError("no estimable leave-block-out fit")
+    slopes = [v["slope"] for v in results]
+    return {"full_slope": full["slope"], "block_width": float(block_width),
+            "min_deleted_slope": float(min(slopes)), "max_deleted_slope": float(max(slopes)),
+            "max_abs_slope_change": float(max(abs(s-full["slope"]) for s in slopes)),
+            "deleted_blocks": results}
+
+
+def dmx_band_delay(dmx_pc_cm3, dmx_sigma_pc_cm3, frequency_low_mhz, frequency_high_mhz):
+    """Signed DMX delay and conditional 1-sigma across a receiver band (seconds)."""
+    vals = (dmx_pc_cm3, dmx_sigma_pc_cm3, frequency_low_mhz, frequency_high_mhz)
+    if not all(np.isfinite(v) for v in vals) or dmx_sigma_pc_cm3 < 0 or not (0 < frequency_low_mhz < frequency_high_mhz):
+        raise ValueError("invalid DMX, uncertainty or band limits")
+    factor = DISPERSION_CONSTANT_S_MHZ2 * (frequency_low_mhz**-2-frequency_high_mhz**-2)
+    return {"delay_seconds": float(factor*dmx_pc_cm3),
+            "sigma_seconds": float(factor*dmx_sigma_pc_cm3),
+            "band_low_mhz": float(frequency_low_mhz), "band_high_mhz": float(frequency_high_mhz)}
