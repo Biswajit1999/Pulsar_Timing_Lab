@@ -1,0 +1,7 @@
+# NANOGrav timing-series robustness diagnostics
+
+The independent Python tools add three **descriptive** analyses of the repository's retained NANOGrav 11-year residual/DMX asset: (1) inverse-variance DMX linear trend with a centred reference epoch and formal diagonal-error covariance, (2) a nonnegative independent-scatter floor estimated from reduced chi-square, and (3) an irregular-cadence pairwise residual structure function with quoted measurement variances subtracted. Empty lag bins and negative noise-subtracted structure-function estimates are preserved.
+
+Run `python -m pip install numpy`, `python -m unittest discover -s tests -v`, and `python tools/run_timing_robustness.py --output outputs/timing_robustness.json` from the repository root. The runner reads `data/observations/nanograv_11yr_residuals.json` and does not edit it.
+
+**Limitations:** the released residuals depend on a previously fitted timing model, the DMX bins are not independent in general, and formal quoted errors omit cross-epoch and timing-model covariance. The DMX slope uses an approximate 365.25-day year only for a descriptive slope scale. Neither the fitted slope, white-jitter proxy nor structure function establishes a new dispersion trend, gravitational-wave signal, or PTA significance. Scientific inference requires refitting TOAs and a red-noise/cross-covariance model. The pairwise estimator treats pairs as dependent and does not supply an uncertainty on the structure function.
