@@ -1,0 +1,26 @@
+{
+  "project": "Pulsar Timing Lab",
+  "repository": "https://github.com/Biswajit1999/Pulsar_Timing_Lab",
+  "files": [
+    {
+      "label": "Validation summary",
+      "path": "data/validation_summary.csv",
+      "role": "Data and provenance"
+    },
+    {
+      "label": "Synthetic toas",
+      "path": "data/synthetic_toas.csv",
+      "role": "Data and provenance"
+    },
+    {
+      "label": "Nanograv 11yr residuals",
+      "path": "data/observations/nanograv_11yr_residuals.json",
+      "role": "Data and provenance"
+    },
+    {
+      "label": "Nanograv 11yr source metadata",
+      "path": "data/observations/nanograv_11yr_source_metadata.json",
+      "role": "Data and provenance"
+    }
+  ]
+}

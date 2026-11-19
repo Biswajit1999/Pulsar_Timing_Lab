@@ -1,0 +1,145 @@
+{
+  "schema": 1,
+  "project": "Pulsar Timing Lab",
+  "repository": "https://github.com/Biswajit1999/Pulsar_Timing_Lab",
+  "files": [
+    {
+      "label": "Validation summary",
+      "path": "data/validation_summary.csv",
+      "role": "Data and provenance",
+      "bytes": 397,
+      "sha256": "57a7a5ea61fbbb6a346da2222b4e023e81faacb812ef31bc56165e03dc8f18f8",
+      "hash_basis": "LF-normalised text",
+      "format": "CSV",
+      "rows": 7,
+      "columns": 4,
+      "headers": [
+        "check",
+        "value",
+        "expected",
+        "passed"
+      ],
+      "preview": [
+        [
+          "quadratic_phase_cycles",
+          "138241.88011027977",
+          "138241.88011027977",
+          "True"
+        ],
+        [
+          "zero_dm_delay_seconds",
+          "0.0",
+          "0.0",
+          "True"
+        ],
+        [
+          "dispersion_seconds_unit_convention",
+          "0.08558717197916668",
+          "0.08558717197916668",
+          "True"
+        ],
+        [
+          "dm_linearity_ratio",
+          "2.0",
+          "2.0",
+          "True"
+        ]
+      ]
+    },
+    {
+      "label": "Synthetic toas",
+      "path": "data/synthetic_toas.csv",
+      "role": "Data and provenance",
+      "bytes": 8680,
+      "sha256": "352f817c5e6e165f4518f116f93152d73915097f73b131fe93e6e2dc976fbccd",
+      "hash_basis": "LF-normalised text",
+      "format": "CSV",
+      "rows": 61,
+      "columns": 9,
+      "headers": [
+        "mjd_model",
+        "mjd_observed",
+        "elapsed_seconds",
+        "residual_us",
+        "glitch_residual_us",
+        "red_noise_us",
+        "white_noise_us"
+      ],
+      "preview": [
+        [
+          "60400.0",
+          "60399.999999998734",
+          "0.0",
+          "-109.47750959839946",
+          "-0.0",
+          "-61.030906131873316",
+          "-48.44660346652614"
+        ],
+        [
+          "60400.5",
+          "60400.499999999156",
+          "43200.0",
+          "-72.97872167873055",
+          "-0.0",
+          "-64.83960379218176",
+          "-8.139117886548783"
+        ],
+        [
+          "60401.0",
+          "60400.99999999924",
+          "86400.0",
+          "-65.2745117486287",
+          "-0.0",
+          "-70.5103536932805",
+          "5.2358419446517965"
+        ],
+        [
+          "60401.5",
+          "60401.499999998596",
+          "129600.0",
+          "-121.60053667861857",
+          "-0.0",
+          "-106.14150553471201",
+          "-15.459031143906557"
+        ]
+      ]
+    },
+    {
+      "label": "Nanograv 11yr residuals",
+      "path": "data/observations/nanograv_11yr_residuals.json",
+      "role": "Data and provenance",
+      "bytes": 359630,
+      "sha256": "13a0f101215c5030ae9061d0cae6b7ddfd241435a36ad37b5dd90df089abd832",
+      "hash_basis": "LF-normalised text",
+      "format": "JSON",
+      "keys": [
+        "dataset",
+        "version",
+        "product",
+        "pulsars",
+        "provenance",
+        "releaseReadmeExcerpt"
+      ],
+      "arrays": {}
+    },
+    {
+      "label": "Nanograv 11yr source metadata",
+      "path": "data/observations/nanograv_11yr_source_metadata.json",
+      "role": "Data and provenance",
+      "bytes": 693,
+      "sha256": "5bbc95df0908bac3671f7d66b241ad62f505a82b31b6815f4a3cbbef210c1db9",
+      "hash_basis": "LF-normalised text",
+      "format": "JSON",
+      "keys": [
+        "sourceArchive",
+        "archiveBytes",
+        "residualMemberPattern",
+        "dmxMemberPattern",
+        "processing",
+        "releaseWarning",
+        "citation"
+      ],
+      "arrays": {}
+    }
+  ]
+}
