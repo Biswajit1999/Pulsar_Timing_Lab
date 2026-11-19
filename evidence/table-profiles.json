@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "project": "Pulsar Timing Lab",
+  "tables": [
+    {
+      "path": "data/validation_summary.csv",
+      "label": "Validation summary",
+      "role": "Data and provenance",
+      "rows": 7,
+      "width_mismatches": 0,
+      "columns": [
+        {
+          "name": "check",
+          "blank": 0,
+          "text": 7,
+          "finite": 0,
+          "nonfinite": 0
+        },
+        {
+          "name": "value",
+          "blank": 0,
+          "text": 0,
+          "finite": 7,
+          "nonfinite": 0,
+          "minimum": 0.0,
+          "maximum": 138241.88011027977
+        },
+        {
+          "name": "expected",
+          "blank": 0,
+          "text": 0,
+          "finite": 7,
+          "nonfinite": 0,
+          "minimum": 0.0,
+          "maximum": 138241.88011027977
+        },
+        {
+          "name": "passed",
+          "blank": 0,
+          "text": 7,
+          "finite": 0,
+          "nonfinite": 0
+        }
+      ]
+    },
+    {
+      "path": "data/synthetic_toas.csv",
+      "label": "Synthetic toas",
+      "role": "Data and provenance",
+      "rows": 61,
+      "width_mismatches": 0,
+      "columns": [
+        {
+          "name": "mjd_model",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": 60400.0,
+          "maximum": 60430.0
+        },
+        {
+          "name": "mjd_observed",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": 60399.999999998734,
+          "maximum": 60429.99999968456
+        },
+        {
+          "name": "elapsed_seconds",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": 0.0,
+          "maximum": 2592000.0
+        },
+        {
+          "name": "residual_us",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": -27254.465165954116,
+          "maximum": 211.1259930682623
+        },
+        {
+          "name": "glitch_residual_us",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": -27216.098220727647,
+          "maximum": -0.0
+        },
+        {
+          "name": "red_noise_us",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": -327.3709074899593,
+          "maximum": 455.4942467490788
+        },
+        {
+          "name": "white_noise_us",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": -71.78188527032317,
+          "maximum": 68.72577579726929
+        },
+        {
+          "name": "phase_model_cycles",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": 0.0,
+          "maximum": 29025703.475040153
+        },
+        {
+          "name": "phase_true_cycles",
+          "blank": 0,
+          "text": 0,
+          "finite": 61,
+          "nonfinite": 0,
+          "minimum": 0.0,
+          "maximum": 29025703.77981059
+        }
+      ]
+    }
+  ],
+  "excluded": []
+}
