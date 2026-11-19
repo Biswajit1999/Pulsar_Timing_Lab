@@ -9,6 +9,12 @@ DMX values for selected millisecond pulsars. A deliberately separate simulation 
 rotational phase, cold-plasma dispersion calculations, red/white timing noise and optional
 frequency-step glitches without being confused for telescope data.
 
+## Research evidence and downloads
+
+[Open the evidence browser file](evidence.html) for 4 selected files, including [`validation_summary.csv`](data/validation_summary.csv). Each file has a download link and SHA-256 digest. Serve this checkout with `python -m http.server` to view the static browser.
+
+Rebuild the inventory and browser with `python scripts/evidence_catalog.py` and `python scripts/render_evidence_page.py`.
+
 ## Scientific Background
 
 ### Pulsars as rotating neutron stars
